@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tag-to-Wear monitor</title>
+<style>
+  :root {
+    --denim: #1F3350;
+    --label: #F4F6F8;
+    --ink: #14202F;
+    --muted: #566578;
+    --line: #D3DAE2;
+    --sticker: #FFD23F;
+    --alert: #B3261E;
+    --good: #1E6B3C;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--denim); color: var(--label); font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif; line-height: 1.4; min-height: 100vh; }
+  main { max-width: 70rem; margin: 0 auto; padding: 1.25rem 1rem 2.5rem; }
+  h1, h2, p { margin: 0; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1rem; }
+  header h1 { font-size: 1.4rem; margin-right: auto; }
+  .pill { display: inline-block; padding: .25rem .8rem; border-radius: 999px; font-weight: 700; background: var(--label); color: var(--ink); }
+  .pill.on { background: var(--sticker); }
+  .pill.off { background: var(--alert); color: #fff; }
+  select, button {
+    font: inherit; min-height: 2.6rem; border-radius: 10px; border: 2px solid var(--label); background: transparent; color: var(--label); padding: .4rem .9rem; font-weight: 600; cursor: pointer;
+  }
+  select option { color: var(--ink); }
+  select:focus-visible, button:focus-visible { outline: 3px solid var(--sticker); outline-offset: 3px; }
+  .grid { display: grid; gap: 1rem; margin-top: 1rem; grid-template-columns: 1fr; }
+  @media (min-width: 52rem) { .grid { grid-template-columns: 1.1fr .9fr; } }
+  .panel { background: var(--label); color: var(--ink); border-radius: var(--radius); padding: 1.1rem 1.25rem 1.25rem; }
+  .panel h2 { font-size: 1.1rem; margin-bottom: .6rem; }
+  .now { display: grid; gap: .25rem; }
+  .big { font-size: 2.4rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+  .meta { color: var(--muted); font-size: .95rem; }
+  .nums { display: flex; flex-wrap: wrap; gap: .5rem 1.75rem; margin-top: .75rem; font-variant-numeric: tabular-nums; }
+  .nums strong { font-size: 1.3rem; display: block; }
+  ol.script { list-style: none; margin: .5rem 0 0; padding: 0; }
+  ol.script li { display: grid; grid-template-columns: 2.2rem 1fr auto; gap: .5rem; padding: .5rem .4rem; border-top: 1px solid var(--line); align-items: center; }
+  ol.script li.next { background: var(--sticker); border-radius: 8px; font-weight: 700; }
+  ol.script .ok { color: var(--good); font-weight: 700; }
+  ol.script .bad { color: var(--alert); font-weight: 700; }
+  ol.script .wait { color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: .45rem .3rem; border-top: 1px solid var(--line); }
+  th { color: var(--muted); font-size: .9rem; border-top: 0; }
+  td.num, th.num { text-align: right; }
+  .feed { list-style: none; margin: 0; padding: 0; max-height: 26rem; overflow: auto; font-variant-numeric: tabular-nums; }
+  .feed li { padding: .4rem .2rem; border-top: 1px solid var(--line); font-size: .95rem; }
+  .feed li:first-child { border-top: 0; }
+  .tag { color: var(--muted); }
+  .empty { color: var(--muted); }
+  .note { margin-top: 1rem; color: #9FB0C5; font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Tag-to-Wear monitor</h1>
+    <span id="conn" class="pill off">Connecting…</span>
+    <label class="sr-only" for="session" style="position:absolute;left:-9999px">Session</label>
+    <select id="session" aria-label="Session"></select>
+    <button id="csv" type="button">Download CSV</button>
+  </header>
+  <div id="view"></div>
+  <p class="note">Live view only. The phone keeps the full record, so export from the phone's Researcher tools as well. The automatic script check is a guide; confirm errors against the CSV.</p>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  // Must match LIVE_TOPIC in index.html (or open this page with ?topic=NAME).
+  const LIVE_TOPIC = 'tagtowear-a5fvl3jag06snl2f6vkd';
+  const LIVE_BASE = 'https://ntfy.sh/';
+  const topic = new URLSearchParams(location.search).get('topic') || LIVE_TOPIC;
+
+  // Keep in step with index.html and the study kit.
+  const ITEMS = {
+    1: ['Black hoodie', 80], 2: ['Denim jacket', 120], 3: ['White tee', 25], 4: ['Jeans', 90],
+    5: ['Flannel shirt', 60], 6: ['Sneakers', 110], 7: ['Beanie', 20], 8: ['Raincoat', 150]
+  };
+  const SCRIPTS = {
+    A: [1, 4, 1, 6, 4, 3, 1, 6, 7, 4],
+    B: [2, 5, 8, 2, 3, 5, 2, 8, 5, 4]
+  };
+  const name = id => (ITEMS[id] ? ITEMS[id][0] : 'Item ' + id);
+  const fmt = n => '$' + n.toFixed(2);
+
+  // sid -> { sid, events: Map(id -> event), seenAt }
+  const sessions = new Map();
+  let selected = null;     // chosen sid, or null to follow the newest activity
+  let serverTime = {};     // "sid:id" -> ntfy server time (ms), for the live ticker
+
+  function ingest(raw) {
+    let m; try { m = JSON.parse(raw); } catch (e) { return; }
+    if (!m || m.event !== 'message' || typeof m.message !== 'string') return;
+    let ev; try { ev = JSON.parse(m.message); } catch (e) { return; }
+    if (!ev || !ev.sid || ev.id == null || !ev.type) return;
+    let s = sessions.get(ev.sid);
+    if (!s) { s = { sid: ev.sid, events: new Map(), lastServer: 0 }; sessions.set(ev.sid, s); }
+    if (s.events.has(ev.id)) return; // duplicate (relay resend or replay)
+    s.events.set(ev.id, ev);
+    serverTime[ev.sid + ':' + ev.id] = (m.time || 0) * 1000;
+    s.lastServer = Math.max(s.lastServer, (m.time || 0) * 1000);
+  }
+
+  function analyse(session) {
+    const evs = [...session.events.values()].sort((a, b) => a.id - b.id);
+    const undone = new Set(evs.filter(e => e.type === 'undo').map(e => e.ref));
+    const block = evs.reduce((m, e) => Math.max(m, e.block), 0);
+    const go = [...evs].reverse().find(e => e.type === 'go' && e.block === block) || null;
+    const wears = evs.filter(e => e.type === 'wear' && e.block === block && !undone.has(e.id));
+    const last = evs[evs.length - 1];
+    const week = (go || last || {}).week || 'A';
+    const participant = (go || last || {}).participant || '';
+    const scans = wears.map(e => e.item);
+    const expected = SCRIPTS[week] || SCRIPTS.A;
+
+    // Greedy check of scans against the script: match, one-skip (missed), or wrong item.
+    const rows = expected.map((item, i) => ({ i, item, status: 'pending', got: null }));
+    const extras = [];
+    let p = 0;
+    for (const s of scans) {
+      if (p >= expected.length) { extras.push(s); continue; }
+      if (s === expected[p]) { rows[p].status = 'ok'; rows[p].got = s; p++; }
+      else if (p + 1 < expected.length && s === expected[p + 1]) { rows[p].status = 'missed'; rows[p + 1].status = 'ok'; rows[p + 1].got = s; p += 2; }
+      else { rows[p].status = 'wrong'; rows[p].got = s; p++; }
+    }
+    const counts = {};
+    scans.forEach(i => { counts[i] = (counts[i] || 0) + 1; });
+    return {
+      evs, undone, block, go, wears, last, week, participant, scans, expected, rows, extras, next: p, counts,
+      practice: evs.some(e => e.type === 'practice'),
+      undos: evs.filter(e => e.type === 'undo' && e.block === block).length,
+      ignored: evs.filter(e => e.type === 'ignored' && e.block === block).length
+    };
+  }
+
+  // -- DOM helpers (textContent only) --
+  function el(tag, attrs, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) { if (k === 'class') n.className = v; else if (v != null && v !== false) n.setAttribute(k, v === true ? '' : v); }
+    for (const kid of kids.flat()) { if (kid == null || kid === false) continue; n.append(kid.nodeType ? kid : document.createTextNode(String(kid))); }
+    return n;
+  }
+
+  const view = document.getElementById('view');
+  const sel = document.getElementById('session');
+  const conn = document.getElementById('conn');
+
+  function currentSession() {
+    if (selected && sessions.has(selected)) return sessions.get(selected);
+    return [...sessions.values()].sort((a, b) => b.lastServer - a.lastServer)[0] || null;
+  }
+
+  function secs(ms) { return (ms / 1000).toFixed(1) + ' s'; }
+
+  function render() {
+    // session picker
+    const list = [...sessions.values()].sort((a, b) => b.lastServer - a.lastServer);
+    const cur = currentSession();
+    sel.replaceChildren(...(list.length ? list.map(s => {
+      const a = analyse(s);
+      const o = el('option', { value: s.sid }, (a.participant || 'no code') + ', week ' + a.week + ' (' + s.sid + ', ' + s.events.size + ' events)');
+      if (cur && cur.sid === s.sid) o.selected = true;
+      return o;
+    }) : [el('option', {}, 'No sessions yet')]));
+
+    if (!cur) {
+      view.replaceChildren(el('section', { class: 'panel', style: 'margin-top:1rem' },
+        el('h2', {}, 'Waiting for the first scan'),
+        el('p', { class: 'empty' }, 'Open the study page on the phone and scan a tag. Events appear here within a second or two. If nothing appears, check that the phone and this page use the same topic.')));
+      return;
+    }
+    const a = analyse(cur);
+
+    // Now
+    const goMs = a.go ? a.go.t : null;
+    const lastWear = a.wears.length ? a.wears[a.wears.length - 1].t : null;
+    const goServer = a.go ? serverTime[cur.sid + ':' + a.go.id] : null;
+    const now = el('section', { class: 'panel now' },
+      el('h2', {}, 'Now'),
+      el('p', { class: 'big' }, (a.participant || 'No code') + ' · week ' + a.week),
+      el('p', { class: 'meta' }, a.block ? 'Block ' + a.block + (a.practice ? ' · practice scan done' : ' · no practice scan logged') : 'No block started yet. Scans are logged but not timed.'),
+      el('div', { class: 'nums' },
+        el('div', {}, el('strong', {}, a.scans.length + ' / ' + a.expected.length), 'scans logged'),
+        el('div', {}, el('strong', { id: 'since' }, goServer ? secs(Date.now() - goServer) : '–'), 'since GO (approx, live)'),
+        el('div', {}, el('strong', {}, goMs && lastWear ? secs(lastWear - goMs) : '–'), 'GO to last wear (phone clock)'),
+        el('div', {}, el('strong', {}, String(a.undos)), 'undos'),
+        el('div', {}, el('strong', {}, String(a.ignored)), 'duplicate loads ignored')));
+
+    // Script prompter
+    const nextItem = a.next < a.expected.length ? a.expected[a.next] : null;
+    const wrong = a.rows.filter(r => r.status === 'wrong').length;
+    const missed = a.rows.filter(r => r.status === 'missed').length;
+    const script = el('section', { class: 'panel' },
+      el('h2', {}, nextItem ? 'Read next: ' + (a.next + 1) + '. ' + name(nextItem) : 'All ' + a.expected.length + ' events read'),
+      el('p', { class: 'meta' }, 'Wrong item: ' + wrong + ' · Missed: ' + missed + ' · Extra scans: ' + a.extras.length +
+        (a.next < a.expected.length ? ' (unread events are not counted as missed)' : '')),
+      el('ol', { class: 'script' }, a.rows.map(r => el('li', { class: r.i === a.next && r.status === 'pending' ? 'next' : '' },
+        el('span', { class: 'tag' }, String(r.i + 1)),
+        el('span', {}, name(r.item)),
+        r.status === 'ok' ? el('span', { class: 'ok' }, '✓ scanned') :
+        r.status === 'wrong' ? el('span', { class: 'bad' }, 'scanned ' + name(r.got)) :
+        r.status === 'missed' ? el('span', { class: 'bad' }, 'skipped') :
+        el('span', { class: 'wait' }, r.i === a.next ? 'read this one' : 'waiting')))),
+      a.extras.length ? el('p', { class: 'meta', style: 'margin-top:.5rem' }, 'Extra scans after the script: ' + a.extras.map(name).join(', ')) : null);
+
+    // Counts
+    const rowsC = Object.keys(ITEMS).map(id => {
+      const n = a.counts[id] || 0; return { id, n, cpw: n ? ITEMS[id][1] / n : null };
+    });
+    const table = el('section', { class: 'panel' },
+      el('h2', {}, 'Wear counts (matches the phone)'),
+      el('table', {},
+        el('tr', {}, el('th', {}, 'Item'), el('th', { class: 'num' }, 'Wears'), el('th', { class: 'num' }, 'Cost per wear')),
+        rowsC.map(r => el('tr', {}, el('td', {}, name(r.id)), el('td', { class: 'num' }, String(r.n)), el('td', { class: 'num' }, r.cpw === null ? 'Not worn' : fmt(r.cpw))))));
+
+    // Feed
+    const feed = el('section', { class: 'panel' },
+      el('h2', {}, 'Event feed'),
+      el('ul', { class: 'feed' }, [...a.evs].reverse().map(e => {
+        const rel = goMs && e.block === a.block ? '+' + ((e.t - goMs) / 1000).toFixed(1) + ' s' : new Date(e.t).toLocaleTimeString();
+        const label = e.type === 'wear' ? 'Wear: ' + name(e.item) + (a.undone.has(e.id) ? ' (undone)' : '')
+          : e.type === 'undo' ? 'Undo' : e.type === 'go' ? 'GO (block ' + e.block + ' started)'
+          : e.type === 'practice' ? 'Practice scan' : e.type === 'ignored' ? 'Duplicate load ignored: ' + name(e.item) : e.type;
+        return el('li', {}, el('span', { class: 'tag' }, rel + '  '), label);
+      })));
+
+    view.replaceChildren(el('div', { class: 'grid' }, el('div', { style: 'display:grid;gap:1rem;align-content:start' }, now, script), el('div', { style: 'display:grid;gap:1rem;align-content:start' }, table, feed)));
+  }
+
+  // Tick the live "since GO" number without re-rendering everything.
+  setInterval(() => {
+    const cur = currentSession(); const node = document.getElementById('since');
+    if (!cur || !node) return;
+    const a = analyse(cur);
+    const g = a.go ? serverTime[cur.sid + ':' + a.go.id] : null;
+    if (g) node.textContent = secs(Date.now() - g);
+  }, 1000);
+
+  sel.addEventListener('change', () => { selected = sel.value; render(); });
+
+  function csvFor(session) {
+    const a = analyse(session);
+    const goT = {};
+    a.evs.filter(e => e.type === 'go').forEach(e => { goT[e.block] = e.t; });
+    const q = s => { s = String(s == null ? '' : s); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const lines = ['session,block,participant,week,event,item_id,item_name,timestamp_iso,seconds_since_go,undone,ref'];
+    a.evs.forEach(e => lines.push([session.sid, e.block, e.participant, e.week, e.type, e.item == null ? '' : e.item,
+      e.item ? name(e.item) : '', new Date(e.t).toISOString(), e.block > 0 && goT[e.block] != null ? ((e.t - goT[e.block]) / 1000).toFixed(1) : '',
+      e.type === 'wear' && a.undone.has(e.id) ? 'yes' : '', e.ref == null ? '' : e.ref].map(q).join(',')));
+    return lines.join('\n');
+  }
+  document.getElementById('csv').addEventListener('click', () => {
+    const cur = currentSession(); if (!cur) return;
+    const a = analyse(cur);
+    const link = el('a', { href: URL.createObjectURL(new Blob([csvFor(cur)], { type: 'text/csv' })), download: 'monitor-' + (a.participant || cur.sid) + '.csv' });
+    document.body.append(link); link.click(); link.remove();
+  });
+
+  // Connect. EventSource reconnects by itself; duplicates are ignored by id.
+  function connect() {
+    const es = new EventSource(LIVE_BASE + encodeURIComponent(topic) + '/sse?since=all');
+    es.onopen = () => { conn.textContent = 'Connected'; conn.className = 'pill on'; };
+    es.onerror = () => { conn.textContent = 'Reconnecting…'; conn.className = 'pill off'; };
+    es.onmessage = e => { ingest(e.data); render(); };
+    return es;
+  }
+  render();
+  connect();
+})();
+</script>
+</body>
+</html>
