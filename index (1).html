@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1F3350">
+<title>Tag-to-Wear</title>
+<style>
+  :root {
+    --denim: #1F3350;
+    --label: #F4F6F8;
+    --ink: #14202F;
+    --muted: #566578;
+    --line: #D3DAE2;
+    --string: #C9D3DE;
+    --sticker: #FFD23F;
+    --alert: #B3261E;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--denim);
+    color: var(--label);
+    font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    line-height: 1.4;
+    min-height: 100vh;
+    -webkit-text-size-adjust: 100%;
+  }
+  #app { max-width: 28rem; margin: 0 auto; padding: 1.25rem 1rem 2.5rem; }
+  h1, h2, p { margin: 0; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* Buttons */
+  .btn {
+    --btn-fg: var(--label);
+    min-height: 3rem;
+    padding: .7rem 1.1rem;
+    border-radius: 10px;
+    border: 2px solid var(--btn-fg);
+    background: transparent;
+    color: var(--btn-fg);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .panel .btn { --btn-fg: var(--ink); }
+  .btn.primary { --btn-fg: var(--ink); background: var(--sticker); border-color: var(--sticker); }
+  .btn.danger { --btn-fg: var(--alert); }
+  .btn[aria-pressed="true"] { background: var(--ink); color: var(--label); }
+  .btn:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 3px solid var(--sticker);
+    outline-offset: 3px;
+  }
+  .actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.25rem; }
+
+  /* Hang tag */
+  .tag-wrap { position: relative; padding-top: 2.5rem; margin-top: .5rem; }
+  .string { position: absolute; left: 50%; top: 0; width: 3px; height: 3.7rem; background: var(--string); transform: translateX(-50%); z-index: 2; }
+  .tag {
+    position: relative;
+    background: var(--label);
+    color: var(--ink);
+    clip-path: polygon(16% 0, 84% 0, 100% 7%, 100% 100%, 0 100%, 0 7%);
+    padding: 3.2rem 1.5rem 1.6rem;
+  }
+  .hole {
+    position: absolute; left: 50%; top: .9rem;
+    width: 1.3rem; height: 1.3rem; margin-left: -.65rem;
+    border-radius: 50%;
+    background: var(--denim);
+    box-shadow: inset 0 0 0 2px var(--string);
+  }
+  .item-name { font-size: 1.5rem; font-weight: 700; }
+  .badge {
+    display: inline-block;
+    margin-top: .6rem;
+    background: var(--sticker);
+    color: var(--ink);
+    font-weight: 700;
+    border-radius: 999px;
+    padding: .25rem .85rem;
+  }
+  .cpw-label { margin-top: 1.25rem; color: var(--muted); }
+  .cpw { font-size: 3.6rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .meta { color: var(--muted); font-size: .95rem; margin-top: .35rem; }
+  .was { text-decoration: line-through; font-variant-numeric: tabular-nums; }
+  .status-line { margin-top: 1rem; font-weight: 600; }
+
+  /* Panels */
+  .panel { background: var(--label); color: var(--ink); border-radius: var(--radius); padding: 1.1rem 1.1rem 1.25rem; margin-top: 1rem; }
+  .panel h1 { font-size: 1.3rem; }
+  .panel .meta { margin-top: .25rem; }
+  .rows { list-style: none; margin: 1rem 0 0; padding: 0; }
+  .rows li { display: grid; grid-template-columns: 1fr 4rem 6rem; gap: .5rem; padding: .6rem 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .rows li.head { border-top: 0; color: var(--muted); font-size: .9rem; padding-bottom: .2rem; }
+  .rows .num { text-align: right; }
+  .rows .none { color: var(--muted); }
+  .banner { background: var(--sticker); color: var(--ink); border-radius: 10px; padding: .75rem 1rem; font-weight: 600; margin-top: 1rem; }
+  .error { background: var(--label); color: var(--alert); border-radius: 10px; padding: 1rem; margin-top: 1rem; font-weight: 600; }
+
+  /* Researcher tools */
+  details.researcher { margin-top: 1rem; background: var(--label); color: var(--ink); border-radius: var(--radius); padding: .9rem 1.1rem; }
+  details.researcher summary { cursor: pointer; font-weight: 600; min-height: 2.5rem; display: flex; align-items: center; }
+  .field { display: block; margin-top: 1rem; font-weight: 600; }
+  .field input, .field select, .field textarea {
+    display: block; width: 100%; margin-top: .35rem;
+    font: inherit; padding: .65rem .75rem; border: 2px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink);
+  }
+  .field textarea { min-height: 9rem; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .8rem; }
+  .blocks { margin: .75rem 0 0; padding-left: 1.1rem; }
+  .foot { margin-top: 1.5rem; text-align: center; color: #9FB0C5; font-size: .85rem; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<main id="app"></main>
+
+<script>
+(() => {
+  'use strict';
+
+  // ------------------------------------------------------------------
+  // Items. Edit names and prices here if your props change.
+  // Tag URLs are  .../?item=1  to  .../?item=8.  Item 0 is the practice tag.
+  // ------------------------------------------------------------------
+  const ITEMS = [
+    { id: 1, name: 'Black hoodie',  price: 80 },
+    { id: 2, name: 'Denim jacket',  price: 120 },
+    { id: 3, name: 'White tee',     price: 25 },
+    { id: 4, name: 'Jeans',         price: 90 },
+    { id: 5, name: 'Flannel shirt', price: 60 },
+    { id: 6, name: 'Sneakers',      price: 110 },
+    { id: 7, name: 'Beanie',        price: 20 },
+    { id: 8, name: 'Raincoat',      price: 150 }
+  ];
+  const DUPLICATE_WINDOW_MS = 1500; // a repeat load of the same tag inside this window is ignored (logged as "ignored")
+  const KEY = 'tagtowear.v1';
+
+  // ------------------------------------------------------------------
+  // State and storage
+  // ------------------------------------------------------------------
+  let storageOK = true;
+  try { localStorage.setItem('__probe', '1'); localStorage.removeItem('__probe'); } catch (e) { storageOK = false; }
+
+  const fresh = () => ({ v: 1, meta: { participant: '', week: 'A' }, block: 0, epoch: 0, seq: 0, events: [] });
+  let state = fresh();
+  if (storageOK) {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) { const s = JSON.parse(raw); if (s && s.v === 1 && Array.isArray(s.events)) state = s; }
+    } catch (e) { state = fresh(); }
+  }
+  function save() { if (!storageOK) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { storageOK = false; } }
+
+  function addEvent(type, item, extra) {
+    const t = Date.now();
+    const ev = Object.assign({
+      id: ++state.seq, type, item: item === undefined ? null : item, t,
+      participant: state.meta.participant, week: state.meta.week,
+      block: state.block, epoch: state.epoch
+    }, extra || {});
+    state.events.push(ev);
+    save();
+    return ev;
+  }
+  const undoneIds = () => new Set(state.events.filter(e => e.type === 'undo').map(e => e.ref));
+  const wearsFor = id => { const u = undoneIds(); return state.events.filter(e => e.type === 'wear' && e.item === id && e.epoch === state.epoch && !u.has(e.id)).length; };
+  const itemById = id => ITEMS.find(i => i.id === id);
+  const fmt = n => '$' + n.toFixed(2);
+
+  // ------------------------------------------------------------------
+  // Small DOM helper (builds nodes with textContent, so typed text can't inject HTML)
+  // ------------------------------------------------------------------
+  function el(tag, attrs, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (k === 'class') n.className = v;
+      else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
+      else if (v === true) n.setAttribute(k, '');
+      else if (v !== false && v != null) n.setAttribute(k, v);
+    }
+    for (const kid of kids.flat()) {
+      if (kid == null || kid === false) continue;
+      n.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+    }
+    return n;
+  }
+  const app = document.getElementById('app');
+  function mount(...nodes) { app.replaceChildren(...nodes.filter(Boolean)); window.scrollTo(0, 0); }
+  const storageBanner = () => storageOK ? null :
+    el('p', { class: 'banner' }, 'This browser is blocking storage, so counts will be lost when the page closes. Turn off private browsing.');
+  const reduced = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  function countTo(node, from, to) {
+    if (reduced() || from == null || from === to) { node.textContent = fmt(to); return; }
+    const start = performance.now(), dur = 700;
+    node.textContent = fmt(from);
+    requestAnimationFrame(function step(now) {
+      const k = Math.min(1, (now - start) / dur), e = 1 - Math.pow(1 - k, 3);
+      node.textContent = fmt(from + (to - from) * e);
+      if (k < 1) requestAnimationFrame(step); else node.textContent = fmt(to);
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // Views
+  // ------------------------------------------------------------------
+  function tagCard(children) {
+    return el('div', { class: 'tag-wrap' },
+      el('div', { class: 'string', 'aria-hidden': 'true' }),
+      el('div', { class: 'tag' }, el('div', { class: 'hole', 'aria-hidden': 'true' }), children));
+  }
+
+  function showWear(item, ev, dup) {
+    const wears = wearsFor(item.id);
+    const now = item.price / Math.max(wears, 1);
+    const prev = wears > 1 ? item.price / (wears - 1) : null;
+    const animated = el('span', { 'aria-hidden': 'true' });
+    countTo(animated, prev, now);
+    const body = [
+      el('h1', { class: 'item-name' }, item.name),
+      el('span', { class: 'badge' }, 'Worn ' + wears + (wears === 1 ? ' time' : ' times')),
+      el('p', { class: 'cpw-label' }, 'Cost per wear'),
+      el('p', { class: 'cpw' }, animated, el('span', { class: 'sr' }, fmt(now))),
+      el('p', { class: 'meta' }, 'Price ' + fmt(item.price), prev ? [' · ', el('span', { class: 'was' }, 'was ' + fmt(prev))] : null)
+    ];
+    const msg = el('p', { class: 'status-line', role: 'status' }, dup ? 'Already logged a moment ago.' : 'Wear logged.');
+    const undo = el('button', { class: 'btn', type: 'button', onclick: () => {
+      addEvent('undo', item.id, { ref: ev.id });
+      showUndone(item);
+    } }, 'Undo this wear');
+    const all = el('button', { class: 'btn primary', type: 'button', onclick: () => showSummary() }, 'See all items');
+    mount(storageBanner(), msg, tagCard(body), el('div', { class: 'actions' }, undo, all));
+  }
+
+  function showUndone(item) {
+    const wears = wearsFor(item.id);
+    mount(
+      storageBanner(),
+      el('p', { class: 'status-line', role: 'status' }, 'Wear removed.'),
+      tagCard([
+        el('h1', { class: 'item-name' }, item.name),
+        el('span', { class: 'badge' }, 'Worn ' + wears + (wears === 1 ? ' time' : ' times')),
+        el('p', { class: 'cpw-label' }, 'Cost per wear'),
+        el('p', { class: 'cpw' }, wears ? fmt(item.price / wears) : 'Not worn'),
+        el('p', { class: 'meta' }, 'Price ' + fmt(item.price))
+      ]),
+      el('div', { class: 'actions' }, el('button', { class: 'btn primary', type: 'button', onclick: () => showSummary() }, 'See all items'))
+    );
+  }
+
+  function showPractice() {
+    mount(
+      storageBanner(),
+      el('p', { class: 'status-line', role: 'status' }, 'Practice scan worked.'),
+      tagCard([
+        el('h1', { class: 'item-name' }, 'Practice tag'),
+        el('p', { class: 'meta' }, 'This tag is not counted. Scan a garment tag to log a real wear.')
+      ]),
+      el('div', { class: 'actions' }, el('button', { class: 'btn primary', type: 'button', onclick: () => showSummary() }, 'See all items'))
+    );
+  }
+
+  function showError(message) {
+    mount(storageBanner(), el('p', { class: 'error', role: 'alert' }, message),
+      el('div', { class: 'actions' }, el('button', { class: 'btn primary', type: 'button', onclick: () => showSummary() }, 'See all items')));
+  }
+
+  let ranked = false;
+  let tick = null;
+  function showSummary() {
+    if (tick) { clearInterval(tick); tick = null; }
+    const rows = ITEMS.map(i => ({ item: i, wears: wearsFor(i.id) }));
+    rows.forEach(r => { r.cpw = r.wears ? r.item.price / r.wears : null; });
+    if (ranked) rows.sort((a, b) => (a.cpw === null) - (b.cpw === null) || (a.cpw - b.cpw));
+    const list = el('ul', { class: 'rows' },
+      el('li', { class: 'head' }, el('span', {}, 'Item'), el('span', { class: 'num' }, 'Wears'), el('span', { class: 'num' }, 'Cost per wear')),
+      rows.map(r => el('li', {},
+        el('span', {}, r.item.name),
+        el('span', { class: 'num' }, String(r.wears)),
+        r.cpw === null ? el('span', { class: 'num none' }, 'Not worn') : el('span', { class: 'num' }, fmt(r.cpw)))));
+    const toggle = el('button', { class: 'btn', type: 'button', 'aria-pressed': String(ranked), onclick: () => { ranked = !ranked; showSummary(); } },
+      'Rank by cost per wear');
+    const panel = el('section', { class: 'panel' },
+      el('h1', {}, 'All items'),
+      el('p', { class: 'meta' }, 'Cost per wear is the price divided by the number of wears.'),
+      list,
+      el('div', { class: 'actions' }, toggle));
+    mount(storageBanner(), panel, researcherPanel(), el('p', { class: 'foot' }, 'Tag-to-Wear prototype'));
+  }
+
+  // ------------------------------------------------------------------
+  // Researcher tools (hidden under a closed "details" at the bottom of the summary)
+  // ------------------------------------------------------------------
+  function q(s) { s = String(s == null ? '' : s); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+
+  function csvText() {
+    const goT = {};
+    state.events.filter(e => e.type === 'go').forEach(e => { goT[e.block] = e.t; });
+    const undone = undoneIds();
+    const lines = ['block,participant,week,event,item_id,item_name,timestamp_iso,seconds_since_go,undone,ref'];
+    state.events.forEach(e => {
+      const it = e.item ? itemById(e.item) : null;
+      const secs = e.block > 0 && goT[e.block] != null ? ((e.t - goT[e.block]) / 1000).toFixed(1) : '';
+      lines.push([e.block, e.participant, e.week, e.type, e.item == null ? '' : e.item, it ? it.name : '',
+        new Date(e.t).toISOString(), secs, e.type === 'wear' && undone.has(e.id) ? 'yes' : '', e.ref == null ? '' : e.ref].map(q).join(','));
+    });
+    return lines.join('\n');
+  }
+
+  function blockSummaries() {
+    const undone = undoneIds(), out = [];
+    for (let b = 1; b <= state.block; b++) {
+      const go = state.events.find(e => e.type === 'go' && e.block === b);
+      if (!go) continue;
+      const w = state.events.filter(e => e.type === 'wear' && e.block === b && !undone.has(e.id));
+      const last = w.length ? Math.max(...w.map(e => e.t)) : null;
+      out.push({ block: b, participant: go.participant, week: go.week, wears: w.length,
+        secs: last ? ((last - go.t) / 1000).toFixed(1) : null });
+    }
+    return out;
+  }
+
+  function researcherPanel() {
+    const status = el('p', { class: 'meta', id: 'status' });
+    const updateStatus = () => {
+      if (!state.block) { status.textContent = 'No block started yet. Scans are logged but not timed.'; return; }
+      const go = state.events.filter(e => e.type === 'go').pop();
+      const n = ITEMS.reduce((s, i) => s + wearsFor(i.id), 0);
+      status.textContent = 'Block ' + state.block + ' · ' + (state.meta.participant || 'no code') + ' · week ' + state.meta.week +
+        ' · ' + n + ' wears · ' + Math.round((Date.now() - go.t) / 1000) + ' s since GO';
+    };
+    updateStatus();
+
+    const code = el('input', { type: 'text', maxlength: '12', value: state.meta.participant, autocomplete: 'off', oninput: e => { state.meta.participant = e.target.value.trim(); save(); updateStatus(); } });
+    const week = el('select', { onchange: e => { state.meta.week = e.target.value; save(); updateStatus(); } },
+      el('option', { value: 'A', selected: state.meta.week === 'A' }, 'Week A'),
+      el('option', { value: 'B', selected: state.meta.week === 'B' }, 'Week B'));
+
+    const out = el('div');
+    const start = el('button', { class: 'btn primary', type: 'button', onclick: () => {
+      if (!window.confirm('Start a new block? This resets the wear counts to zero and marks GO.')) return;
+      state.block++; state.epoch++; addEvent('go'); showSummary();
+      document.querySelector('details.researcher').open = true;
+    } }, 'Start block (reset counts and mark GO)');
+    const exp = el('button', { class: 'btn', type: 'button', onclick: () => {
+      const text = csvText();
+      const area = el('textarea', { readonly: true, 'aria-label': 'Exported CSV' }, text);
+      const copy = el('button', { class: 'btn', type: 'button', onclick: async () => {
+        try { await navigator.clipboard.writeText(text); copy.textContent = 'Copied'; } catch (e) { area.select(); copy.textContent = 'Select and copy manually'; }
+      } }, 'Copy CSV');
+      const dl = el('button', { class: 'btn', type: 'button', onclick: () => {
+        const a = el('a', { href: URL.createObjectURL(new Blob([text], { type: 'text/csv' })), download: 'tag-to-wear-log-' + (state.meta.participant || 'session') + '.csv' });
+        document.body.append(a); a.click(); a.remove();
+      } }, 'Download CSV');
+      out.replaceChildren(el('label', { class: 'field' }, 'Event log', area), el('div', { class: 'actions' }, copy, dl));
+    } }, 'Export log');
+    const erase = el('button', { class: 'btn danger', type: 'button', onclick: () => {
+      if (!window.confirm('Erase ALL logged data on this phone? Export first if you need it.')) return;
+      state = fresh(); save(); showSummary();
+    } }, 'Erase all data');
+
+    const bs = blockSummaries();
+    const blocks = bs.length ? el('ol', { class: 'blocks' }, bs.map(b =>
+      el('li', {}, (b.participant || 'no code') + ', week ' + b.week + ': ' + b.wears + ' wears, ' + (b.secs === null ? 'no wears' : b.secs + ' s from GO to last wear')))) : null;
+
+    const d = el('details', { class: 'researcher' },
+      el('summary', {}, 'Researcher tools'),
+      el('label', { class: 'field' }, 'Participant code', code),
+      el('label', { class: 'field' }, 'Scripted week', week),
+      status,
+      el('div', { class: 'actions' }, start),
+      blocks ? el('p', { class: 'field' }, 'Blocks so far') : null, blocks,
+      el('div', { class: 'actions' }, exp, erase),
+      out);
+    tick = setInterval(updateStatus, 1000);
+    return d;
+  }
+
+  // ------------------------------------------------------------------
+  // Entry point: ?item=N logs a wear, otherwise show the summary
+  // ------------------------------------------------------------------
+  function init() {
+    const raw = new URLSearchParams(window.location.search).get('item');
+    if (raw === null) { showSummary(); return; }
+    // Clean the address so a refresh or back-navigation cannot log the same wear twice.
+    try { history.replaceState(null, '', window.location.pathname + window.location.hash); } catch (e) { /* ignore */ }
+    if (!/^\d+$/.test(raw)) { showError('That tag is not recognised. Item numbers run from 0 to ' + ITEMS.length + '.'); return; }
+    const id = Number(raw);
+    if (id === 0) { addEvent('practice', 0); showPractice(); return; }
+    const item = itemById(id);
+    if (!item) { showError('That tag is not recognised. Item numbers run from 0 to ' + ITEMS.length + '.'); return; }
+
+    // Ignore an accidental double-load of the same tag inside a short window (logged for the audit trail).
+    const undone = undoneIds();
+    const last = [...state.events].reverse().find(e => e.type === 'wear' && e.item === id && !undone.has(e.id));
+    if (last && Date.now() - last.t < DUPLICATE_WINDOW_MS) { addEvent('ignored', id, { ref: last.id }); showWear(item, last, true); return; }
+
+    const ev = addEvent('wear', id);
+    showWear(item, ev, false);
+  }
+  init();
+})();
+</script>
+</body>
+</html>
