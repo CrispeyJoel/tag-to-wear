@@ -170,7 +170,7 @@
   try { localStorage.setItem('__probe', '1'); localStorage.removeItem('__probe'); } catch (e) { storageOK = false; }
 
   const newSid = () => Math.random().toString(36).slice(2, 8);
-  const fresh = () => ({ v: 1, sid: newSid(), meta: { participant: '', week: 'A' }, block: 0, epoch: 0, seq: 0, events: [], outbox: [] });
+  const fresh = () => ({ v: 1, sid: newSid(), meta: { participant: '', week: 'A', run: '' }, block: 0, epoch: 0, seq: 0, events: [], outbox: [] });
   let state = fresh();
   if (storageOK) {
     try {
@@ -180,14 +180,33 @@
   }
   if (!state.sid) state.sid = newSid();
   if (!Array.isArray(state.outbox)) state.outbox = [];
+  if (state.meta && state.meta.run === undefined) state.meta.run = '';
   function save() { if (!storageOK) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { storageOK = false; } }
   save(); // persist the session id straight away so it stays the same across page loads
 
+  // Each scan can open a new browser tab, and old tabs keep a stale copy in memory. Re-read the shared
+  // copy before every change so a stale tab can never overwrite newer scans.
+  function reloadState() {
+    if (!storageOK) return;
+    try {
+      const raw = localStorage.getItem(KEY); if (!raw) return;
+      const s = JSON.parse(raw);
+      if (s && s.v === 1 && Array.isArray(s.events)) {
+        if (!s.sid) s.sid = state.sid;
+        if (!Array.isArray(s.outbox)) s.outbox = [];
+        if (!s.meta) s.meta = { participant: '', week: 'A', run: '' };
+        if (s.meta.run === undefined) s.meta.run = '';
+        state = s;
+      }
+    } catch (e) { /* keep the in-memory copy */ }
+  }
+
   function addEvent(type, item, extra) {
+    reloadState();
     const t = Date.now();
     const ev = Object.assign({
       id: ++state.seq, type, item: item === undefined ? null : item, t,
-      participant: state.meta.participant, week: state.meta.week,
+      participant: state.meta.participant, week: state.meta.week, run: state.meta.run || '',
       block: state.block, epoch: state.epoch
     }, extra || {});
     state.events.push(ev);
@@ -209,13 +228,14 @@
     if (!LIVE_TOPIC || flushing || !state.outbox.length || Date.now() < backoffUntil) return;
     flushing = true;
     try {
-      while (state.outbox.length) {
-        const ev = state.events.find(e => e.id === state.outbox[0]);
+      while (reloadState(), state.outbox.length) {
+        const sentId = state.outbox[0];
+        const ev = state.events.find(e => e.id === sentId);
         if (ev) {
           const res = await fetch(LIVE_BASE + LIVE_TOPIC, { method: 'POST', body: JSON.stringify(Object.assign({ sid: state.sid }, ev)) });
           if (!res.ok) throw new Error('HTTP ' + res.status);
         }
-        state.outbox.shift(); save();
+        reloadState(); if (state.outbox[0] === sentId) state.outbox.shift(); save();
       }
       failCount = 0; lastSyncError = '';
     } catch (e) {
@@ -431,7 +451,7 @@
     const out = el('div');
     const start = el('button', { class: 'btn primary', type: 'button', onclick: () => {
       if (!window.confirm('Start a new block? This resets the wear counts to zero and marks GO.')) return;
-      state.block++; state.epoch++; addEvent('go'); showSummary();
+      reloadState(); state.meta.run = ''; state.block++; state.epoch++; save(); addEvent('go'); showSummary();
       const dd = document.querySelector('details.researcher'); if (dd) dd.open = true;
     } }, 'Start block (reset counts and mark GO)');
     const exp = el('button', { class: 'btn', type: 'button', onclick: () => {
@@ -479,7 +499,7 @@
   const seenCids = new Set();
   const nonce = Math.random().toString(36).slice(2, 8);
   const totalWears = () => ITEMS.reduce((n, i) => n + wearsFor(i.id), 0);
-  const snapshot = () => ({ participant: state.meta.participant, week: state.meta.week, block: state.block, wears: totalWears(), ranked });
+  const snapshot = () => ({ participant: state.meta.participant, week: state.meta.week, run: state.meta.run || '', block: state.block, wears: totalWears(), ranked });
   function relayPost(obj) {
     if (!LIVE_TOPIC) return;
     try { fetch(LIVE_BASE + LIVE_TOPIC, { method: 'POST', body: JSON.stringify(obj) }).catch(() => {}); } catch (e) { /* ignore */ }
@@ -488,16 +508,19 @@
   function ack(cid, ok, note) { relayPost(Object.assign({ sid: state.sid, type: 'ack', cid, ok, note: note || '', t: Date.now() }, snapshot())); }
 
   function applyMeta(c) {
+    reloadState();
+    if (typeof c.run === 'string') state.meta.run = c.run.slice(0, 12);
     if (typeof c.participant === 'string') state.meta.participant = c.participant.trim().slice(0, 12);
     if (c.week === 'A' || c.week === 'B') state.meta.week = c.week;
     save();
   }
   function runCommand(c) {
+    reloadState();
     let ok = true, note = '';
     switch (c.cmd) {
       case 'ping': break;
       case 'setup': applyMeta(c); break;
-      case 'start': applyMeta(c); state.block++; state.epoch++; addEvent('go'); break;
+      case 'start': applyMeta(c); reloadState(); state.block++; state.epoch++; save(); addEvent('go'); break;
       case 'end': addEvent('end'); break;
       case 'view': if (c.view === 'summary') showSummary(); else { ok = false; note = 'unknown view'; } break;
       case 'rank': ranked = !!c.on; break;
@@ -516,6 +539,7 @@
     try { c = JSON.parse(m.message); } catch (e) { return; }
     if (!c) return;
     if (c.hello) { if (c.hello === ctlMarker) { ctlReady = true; sendPresence(); } return; }
+    if (document.visibilityState === 'hidden') return; // only the tab in front acts on commands
     if (!ctlReady || c.type !== 'cmd' || !c.cid || seenCids.has(c.cid)) return;
     seenCids.add(c.cid);
     if (c.sid !== state.sid) { ack(c.cid, false, 'That command was for a different session. Select the newest session on the monitor.'); return; }
@@ -566,7 +590,7 @@
   init();
   connectControl();
   setInterval(() => { if (document.visibilityState !== 'hidden') sendPresence(); }, 20000);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sendPresence(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { reloadState(); sendPresence(); } });
   setInterval(flush, 4000);
   window.addEventListener('online', () => { backoffUntil = 0; flush(); });
   flush();
