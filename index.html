@@ -101,7 +101,10 @@
 
   /* Researcher tools */
   details.researcher { margin-top: 1rem; background: var(--label); color: var(--ink); border-radius: var(--radius); padding: .9rem 1.1rem; }
-  details.researcher summary { cursor: pointer; font-weight: 600; min-height: 2.5rem; display: flex; align-items: center; }
+  details.researcher summary { cursor: pointer; font-weight: 600; min-height: 2.5rem; display: flex; align-items: center; list-style: none; }
+  details.researcher summary::-webkit-details-marker { display: none; }
+  details.researcher summary::after { content: '+'; margin-left: auto; font-size: 1.6rem; line-height: 1; }
+  details.researcher[open] summary::after { content: '\2212'; }
   .field { display: block; margin-top: 1rem; font-weight: 600; }
   .field input, .field select, .field textarea {
     display: block; width: 100%; margin-top: .35rem;
@@ -270,7 +273,7 @@
 
   let ranked = false;
   let tick = null;
-  function showSummary() {
+  function showSummary(openTools) {
     if (tick) { clearInterval(tick); tick = null; }
     const rows = ITEMS.map(i => ({ item: i, wears: wearsFor(i.id) }));
     rows.forEach(r => { r.cpw = r.wears ? r.item.price / r.wears : null; });
@@ -288,7 +291,9 @@
       el('p', { class: 'meta' }, 'Cost per wear is the price divided by the number of wears.'),
       list,
       el('div', { class: 'actions' }, toggle));
-    mount(storageBanner(), panel, researcherPanel(), el('p', { class: 'foot' }, 'Tag-to-Wear prototype'));
+    const tools = researcherPanel();
+    mount(storageBanner(), panel, tools, el('p', { class: 'foot' }, 'Tag-to-Wear prototype'));
+    if (openTools) { tools.open = true; if (tools.scrollIntoView) tools.scrollIntoView(); }
   }
 
   // ------------------------------------------------------------------
@@ -383,8 +388,9 @@
   // Entry point: ?item=N logs a wear, otherwise show the summary
   // ------------------------------------------------------------------
   function init() {
-    const raw = new URLSearchParams(window.location.search).get('item');
-    if (raw === null) { showSummary(); return; }
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get('item');
+    if (raw === null) { showSummary(params.has('tools')); return; }
     // Clean the address so a refresh or back-navigation cannot log the same wear twice.
     try { history.replaceState(null, '', window.location.pathname + window.location.hash); } catch (e) { /* ignore */ }
     if (!/^\d+$/.test(raw)) { showError('That tag is not recognised. Item numbers run from 0 to ' + ITEMS.length + '.'); return; }
