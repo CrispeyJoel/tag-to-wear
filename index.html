@@ -142,12 +142,22 @@
   const KEY = 'tagtowear.v1';
 
   // ------------------------------------------------------------------
+  // Live monitoring. Every event is also relayed to a public ntfy.sh topic so monitor.html can
+  // show it on your laptop. The phone keeps its own full copy either way, and a failed send never
+  // slows or blocks the page. Use a long random topic and put no names in participant codes.
+  // Set LIVE_TOPIC to '' to switch live sync off. monitor.html must use the same topic.
+  // ------------------------------------------------------------------
+  const LIVE_TOPIC = 'tagtowear-a5fvl3jag06snl2f6vkd';
+  const LIVE_BASE = 'https://ntfy.sh/';
+
+  // ------------------------------------------------------------------
   // State and storage
   // ------------------------------------------------------------------
   let storageOK = true;
   try { localStorage.setItem('__probe', '1'); localStorage.removeItem('__probe'); } catch (e) { storageOK = false; }
 
-  const fresh = () => ({ v: 1, meta: { participant: '', week: 'A' }, block: 0, epoch: 0, seq: 0, events: [] });
+  const newSid = () => Math.random().toString(36).slice(2, 8);
+  const fresh = () => ({ v: 1, sid: newSid(), meta: { participant: '', week: 'A' }, block: 0, epoch: 0, seq: 0, events: [], outbox: [] });
   let state = fresh();
   if (storageOK) {
     try {
@@ -155,6 +165,8 @@
       if (raw) { const s = JSON.parse(raw); if (s && s.v === 1 && Array.isArray(s.events)) state = s; }
     } catch (e) { state = fresh(); }
   }
+  if (!state.sid) state.sid = newSid();
+  if (!Array.isArray(state.outbox)) state.outbox = [];
   function save() { if (!storageOK) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { storageOK = false; } }
 
   function addEvent(type, item, extra) {
@@ -165,13 +177,38 @@
       block: state.block, epoch: state.epoch
     }, extra || {});
     state.events.push(ev);
+    if (LIVE_TOPIC) state.outbox.push(ev.id);
     save();
+    flush();
     return ev;
   }
   const undoneIds = () => new Set(state.events.filter(e => e.type === 'undo').map(e => e.ref));
   const wearsFor = id => { const u = undoneIds(); return state.events.filter(e => e.type === 'wear' && e.item === id && e.epoch === state.epoch && !u.has(e.id)).length; };
   const itemById = id => ITEMS.find(i => i.id === id);
   const fmt = n => '$' + n.toFixed(2);
+
+  // ------------------------------------------------------------------
+  // Live relay: send queued events in order, retry with a growing delay if the network fails.
+  // ------------------------------------------------------------------
+  let flushing = false, failCount = 0, backoffUntil = 0, lastSyncError = '';
+  async function flush() {
+    if (!LIVE_TOPIC || flushing || !state.outbox.length || Date.now() < backoffUntil) return;
+    flushing = true;
+    try {
+      while (state.outbox.length) {
+        const ev = state.events.find(e => e.id === state.outbox[0]);
+        if (ev) {
+          const res = await fetch(LIVE_BASE + LIVE_TOPIC, { method: 'POST', body: JSON.stringify(Object.assign({ sid: state.sid }, ev)) });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+        }
+        state.outbox.shift(); save();
+      }
+      failCount = 0; lastSyncError = '';
+    } catch (e) {
+      failCount++; lastSyncError = String((e && e.message) || e);
+      backoffUntil = Date.now() + Math.min(30000, 4000 * Math.pow(2, failCount - 1));
+    } finally { flushing = false; }
+  }
 
   // ------------------------------------------------------------------
   // Small DOM helper (builds nodes with textContent, so typed text can't inject HTML)
@@ -330,13 +367,22 @@
 
   function researcherPanel() {
     const status = el('p', { class: 'meta', id: 'status' });
-    const updateStatus = () => {
+    let updateStatus = () => {
       if (!state.block) { status.textContent = 'No block started yet. Scans are logged but not timed.'; return; }
       const go = state.events.filter(e => e.type === 'go').pop();
       const n = ITEMS.reduce((s, i) => s + wearsFor(i.id), 0);
       status.textContent = 'Block ' + state.block + ' · ' + (state.meta.participant || 'no code') + ' · week ' + state.meta.week +
         ' · ' + n + ' wears · ' + Math.round((Date.now() - go.t) / 1000) + ' s since GO';
     };
+    const sync = el('p', { class: 'meta' });
+    const updateSync = () => {
+      sync.textContent = !LIVE_TOPIC ? 'Live sync: off.'
+        : state.outbox.length ? 'Live sync: ' + state.outbox.length + ' waiting' + (lastSyncError ? ' (' + lastSyncError + ')' : '')
+        : 'Live sync: all events sent.';
+    };
+    updateSync();
+    const baseUpdate = updateStatus;
+    updateStatus = () => { baseUpdate(); updateSync(); };
     updateStatus();
 
     const code = el('input', { type: 'text', maxlength: '12', value: state.meta.participant, autocomplete: 'off', oninput: e => { state.meta.participant = e.target.value.trim(); save(); updateStatus(); } });
@@ -375,7 +421,7 @@
       el('summary', {}, 'Researcher tools'),
       el('label', { class: 'field' }, 'Participant code', code),
       el('label', { class: 'field' }, 'Scripted week', week),
-      status,
+      status, sync,
       el('div', { class: 'actions' }, start),
       blocks ? el('p', { class: 'field' }, 'Blocks so far') : null, blocks,
       el('div', { class: 'actions' }, exp, erase),
@@ -408,6 +454,9 @@
     showWear(item, ev, false);
   }
   init();
+  setInterval(flush, 4000);
+  window.addEventListener('online', () => { backoffUntil = 0; flush(); });
+  flush();
 })();
 </script>
 </body>
