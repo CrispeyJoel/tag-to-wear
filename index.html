@@ -142,13 +142,26 @@
   const KEY = 'tagtowear.v1';
 
   // ------------------------------------------------------------------
-  // Live monitoring. Every event is also relayed to a public ntfy.sh topic so monitor.html can
-  // show it on your laptop. The phone keeps its own full copy either way, and a failed send never
-  // slows or blocks the page. Use a long random topic and put no names in participant codes.
-  // Set LIVE_TOPIC to '' to switch live sync off. monitor.html must use the same topic.
+  // Live monitoring and remote control. Every event is relayed to a public ntfy.sh topic so
+  // monitor.html can show it on your laptop, and the monitor can send commands back. The phone keeps
+  // its own full copy either way, and a failed send never slows or blocks the page.
+  // The topic is NOT stored in this file (this repo is public). Open the phone page once with
+  //   ...?tools=1&topic=YOUR-PRIVATE-TOPIC
+  // and it remembers the topic on that phone. Without a topic, live sync and remote control are off.
+  // Use a long random topic and put no names in participant codes.
   // ------------------------------------------------------------------
-  const LIVE_TOPIC = 'tagtowear-a5fvl3jag06snl2f6vkd';
+  const TOPIC_KEY = 'tagtowear.topic';
+  const LIVE_TOPIC = (() => {
+    let t = '';
+    try {
+      const fromUrl = new URLSearchParams(window.location.search).get('topic');
+      if (fromUrl) { t = fromUrl.trim(); localStorage.setItem(TOPIC_KEY, t); }
+      else t = localStorage.getItem(TOPIC_KEY) || '';
+    } catch (e) { /* storage blocked */ }
+    return /^[A-Za-z0-9_-]{1,64}$/.test(t) ? t : '';
+  })();
   const LIVE_BASE = 'https://ntfy.sh/';
+  const CTL_TOPIC = LIVE_TOPIC + '-ctl'; // monitor.html -> phone commands
 
   // ------------------------------------------------------------------
   // State and storage
@@ -168,6 +181,7 @@
   if (!state.sid) state.sid = newSid();
   if (!Array.isArray(state.outbox)) state.outbox = [];
   function save() { if (!storageOK) return; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { storageOK = false; } }
+  save(); // persist the session id straight away so it stays the same across page loads
 
   function addEvent(type, item, extra) {
     const t = Date.now();
@@ -227,6 +241,7 @@
     }
     return n;
   }
+  let curView = '';
   const app = document.getElementById('app');
   function mount(...nodes) { app.replaceChildren(...nodes.filter(Boolean)); window.scrollTo(0, 0); }
   const storageBanner = () => storageOK ? null :
@@ -254,6 +269,7 @@
   }
 
   function showWear(item, ev, dup) {
+    curView = 'wear';
     const wears = wearsFor(item.id);
     const now = item.price / Math.max(wears, 1);
     const prev = wears > 1 ? item.price / (wears - 1) : null;
@@ -276,6 +292,7 @@
   }
 
   function showUndone(item) {
+    curView = 'undone';
     const wears = wearsFor(item.id);
     mount(
       storageBanner(),
@@ -292,6 +309,7 @@
   }
 
   function showPractice() {
+    curView = 'practice';
     mount(
       storageBanner(),
       el('p', { class: 'status-line', role: 'status' }, 'Practice scan worked.'),
@@ -304,6 +322,7 @@
   }
 
   function showError(message) {
+    curView = 'error';
     mount(storageBanner(), el('p', { class: 'error', role: 'alert' }, message),
       el('div', { class: 'actions' }, el('button', { class: 'btn primary', type: 'button', onclick: () => showSummary() }, 'See all items')));
   }
@@ -311,6 +330,7 @@
   let ranked = false;
   let tick = null;
   function showSummary(openTools) {
+    curView = 'summary';
     if (tick) { clearInterval(tick); tick = null; }
     const rows = ITEMS.map(i => ({ item: i, wears: wearsFor(i.id) }));
     rows.forEach(r => { r.cpw = r.wears ? r.item.price / r.wears : null; });
@@ -376,9 +396,9 @@
     };
     const sync = el('p', { class: 'meta' });
     const updateSync = () => {
-      sync.textContent = !LIVE_TOPIC ? 'Live sync: off.'
-        : state.outbox.length ? 'Live sync: ' + state.outbox.length + ' waiting' + (lastSyncError ? ' (' + lastSyncError + ')' : '')
-        : 'Live sync: all events sent.';
+      sync.textContent = !LIVE_TOPIC ? 'Live sync: off. Open this page once with ?tools=1&topic=YOUR-TOPIC to turn it on.'
+        : (state.outbox.length ? 'Live sync: ' + state.outbox.length + ' waiting' + (lastSyncError ? ' (' + lastSyncError + ')' : '')
+          : 'Live sync: all events sent.') + ' Remote control: ' + (ctlReady ? 'ready.' : 'connecting…');
     };
     updateSync();
     const baseUpdate = updateStatus;
@@ -431,6 +451,70 @@
   }
 
   // ------------------------------------------------------------------
+  // Remote control from monitor.html.
+  // Commands travel on a second ntfy topic. The phone ignores everything on that topic until it
+  // sees its own "hello" marker come back through the stream, so old commands replayed by the relay
+  // can never run. Each command names the session id it is for, runs at most once, and is answered
+  // with an "ack" that the monitor shows. Commands only work while this page is open on the phone.
+  // ------------------------------------------------------------------
+  let ctlReady = false, ctlMarker = '', markerN = 0;
+  const seenCids = new Set();
+  const nonce = Math.random().toString(36).slice(2, 8);
+  const totalWears = () => ITEMS.reduce((n, i) => n + wearsFor(i.id), 0);
+  const snapshot = () => ({ participant: state.meta.participant, week: state.meta.week, block: state.block, wears: totalWears(), ranked });
+  function relayPost(obj) {
+    if (!LIVE_TOPIC) return;
+    try { fetch(LIVE_BASE + LIVE_TOPIC, { method: 'POST', body: JSON.stringify(obj) }).catch(() => {}); } catch (e) { /* ignore */ }
+  }
+  function sendPresence() { if (ctlReady) relayPost(Object.assign({ sid: state.sid, type: 'presence', t: Date.now() }, snapshot())); }
+  function ack(cid, ok, note) { relayPost(Object.assign({ sid: state.sid, type: 'ack', cid, ok, note: note || '', t: Date.now() }, snapshot())); }
+
+  function applyMeta(c) {
+    if (typeof c.participant === 'string') state.meta.participant = c.participant.trim().slice(0, 12);
+    if (c.week === 'A' || c.week === 'B') state.meta.week = c.week;
+    save();
+  }
+  function runCommand(c) {
+    let ok = true, note = '';
+    switch (c.cmd) {
+      case 'ping': break;
+      case 'setup': applyMeta(c); break;
+      case 'start': applyMeta(c); state.block++; state.epoch++; addEvent('go'); break;
+      case 'end': addEvent('end'); break;
+      case 'view': if (c.view === 'summary') showSummary(); else { ok = false; note = 'unknown view'; } break;
+      case 'rank': ranked = !!c.on; break;
+      case 'erase': state = fresh(); save(); break;
+      default: ok = false; note = 'unknown command';
+    }
+    // Keep what the participant sees accurate, without yanking them away from a scan card.
+    if (ok && c.cmd === 'end') showSummary();
+    else if (ok && c.cmd !== 'view' && c.cmd !== 'ping' && curView === 'summary') showSummary();
+    ack(c.cid, ok, note);
+  }
+  function handleControl(raw) {
+    let m, c;
+    try { m = JSON.parse(raw); } catch (e) { return; }
+    if (!m || m.event !== 'message') return;
+    try { c = JSON.parse(m.message); } catch (e) { return; }
+    if (!c) return;
+    if (c.hello) { if (c.hello === ctlMarker) { ctlReady = true; sendPresence(); } return; }
+    if (!ctlReady || c.type !== 'cmd' || !c.cid || seenCids.has(c.cid)) return;
+    seenCids.add(c.cid);
+    if (c.sid !== state.sid) { ack(c.cid, false, 'That command was for a different session. Select the newest session on the monitor.'); return; }
+    runCommand(c);
+  }
+  function connectControl() {
+    if (!LIVE_TOPIC || typeof EventSource === 'undefined') return;
+    const es = new EventSource(LIVE_BASE + CTL_TOPIC + '/sse');
+    es.onopen = () => {
+      ctlReady = false; ctlMarker = nonce + ':' + (++markerN);
+      try { fetch(LIVE_BASE + CTL_TOPIC, { method: 'POST', body: JSON.stringify({ hello: ctlMarker }) }).catch(() => {}); } catch (e) { /* ignore */ }
+    };
+    es.onerror = () => { ctlReady = false; };
+    es.onmessage = e => handleControl(e.data);
+  }
+
+  // ------------------------------------------------------------------
   // Entry point: ?item=N logs a wear, otherwise show the summary
   // ------------------------------------------------------------------
   function init() {
@@ -454,6 +538,9 @@
     showWear(item, ev, false);
   }
   init();
+  connectControl();
+  setInterval(() => { if (document.visibilityState !== 'hidden') sendPresence(); }, 20000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sendPresence(); });
   setInterval(flush, 4000);
   window.addEventListener('online', () => { backoffUntil = 0; flush(); });
   flush();
