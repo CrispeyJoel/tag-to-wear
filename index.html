@@ -155,7 +155,7 @@
     let t = '';
     try {
       const fromUrl = new URLSearchParams(window.location.search).get('topic');
-      if (fromUrl) { t = fromUrl.trim(); localStorage.setItem(TOPIC_KEY, t); }
+      if (fromUrl !== null) { t = fromUrl.trim(); if (/^[A-Za-z0-9_-]{1,64}$/.test(t)) localStorage.setItem(TOPIC_KEY, t); }
       else t = localStorage.getItem(TOPIC_KEY) || '';
     } catch (e) { /* storage blocked */ }
     return /^[A-Za-z0-9_-]{1,64}$/.test(t) ? t : '';
@@ -242,8 +242,10 @@
     return n;
   }
   let curView = '';
+  let toolsEnabled = false;   // Researcher tools only appear when the page is opened with ?tools=1
+  let setupTimer = null;
   const app = document.getElementById('app');
-  function mount(...nodes) { app.replaceChildren(...nodes.filter(Boolean)); window.scrollTo(0, 0); }
+  function mount(...nodes) { if (setupTimer) { clearInterval(setupTimer); setupTimer = null; } app.replaceChildren(...nodes.filter(Boolean)); window.scrollTo(0, 0); }
   const storageBanner = () => storageOK ? null :
     el('p', { class: 'banner' }, 'This browser is blocking storage, so counts will be lost when the page closes. Turn off private browsing.');
   const reduced = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -327,6 +329,21 @@
       el('div', { class: 'actions' }, el('button', { class: 'btn primary', type: 'button', onclick: () => showSummary() }, 'See all items')));
   }
 
+  function showSetup() {
+    curView = 'setup';
+    const status = el('p', { class: 'status-line', role: 'status' }, 'Checking the connection…');
+    mount(storageBanner(), status, tagCard([
+      el('h1', { class: 'item-name' }, 'All set up'),
+      el('p', { class: 'meta' }, 'This phone is linked to the monitor (code ends ' + LIVE_TOPIC.slice(-4) + ').'),
+      el('p', { class: 'meta' }, 'You can close this page. Scanning a garment tag opens the study page.')
+    ]), el('div', { class: 'actions' }, el('button', { class: 'btn primary', type: 'button', onclick: () => showSummary() }, 'Open study page')));
+    const t0 = Date.now();
+    setupTimer = setInterval(() => {
+      if (ctlReady) { status.textContent = 'Connected. The monitor should now say "Phone online".'; clearInterval(setupTimer); setupTimer = null; }
+      else if (Date.now() - t0 > 8000) status.textContent = 'Linked, but not connected yet. Check this phone has internet, then reload this page.';
+    }, 400);
+  }
+
   let ranked = false;
   let tick = null;
   function showSummary(openTools) {
@@ -345,12 +362,13 @@
       'Rank by cost per wear');
     const panel = el('section', { class: 'panel' },
       el('h1', {}, 'All items'),
+      el('p', { class: 'meta' }, 'Scan a garment\'s tag with your camera to log a wear.'),
       el('p', { class: 'meta' }, 'Cost per wear is the price divided by the number of wears.'),
       list,
-      el('div', { class: 'actions' }, toggle));
-    const tools = researcherPanel();
+      toolsEnabled ? el('div', { class: 'actions' }, toggle) : null);
+    const tools = toolsEnabled ? researcherPanel() : null;
     mount(storageBanner(), panel, tools, el('p', { class: 'foot' }, 'Tag-to-Wear prototype'));
-    if (openTools) { tools.open = true; if (tools.scrollIntoView) tools.scrollIntoView(); }
+    if (openTools && tools) { tools.open = true; if (tools.scrollIntoView) tools.scrollIntoView(); }
   }
 
   // ------------------------------------------------------------------
@@ -414,7 +432,7 @@
     const start = el('button', { class: 'btn primary', type: 'button', onclick: () => {
       if (!window.confirm('Start a new block? This resets the wear counts to zero and marks GO.')) return;
       state.block++; state.epoch++; addEvent('go'); showSummary();
-      document.querySelector('details.researcher').open = true;
+      const dd = document.querySelector('details.researcher'); if (dd) dd.open = true;
     } }, 'Start block (reset counts and mark GO)');
     const exp = el('button', { class: 'btn', type: 'button', onclick: () => {
       const text = csvText();
@@ -519,8 +537,16 @@
   // ------------------------------------------------------------------
   function init() {
     const params = new URLSearchParams(window.location.search);
+    toolsEnabled = params.has('tools');
     const raw = params.get('item');
-    if (raw === null) { showSummary(params.has('tools')); return; }
+    if (raw === null && params.get('topic') !== null) {
+      // Setup link: remember the topic (done at start-up), hide it from the address bar, confirm.
+      try { history.replaceState(null, '', window.location.pathname + (toolsEnabled ? '?tools=1' : '') + window.location.hash); } catch (e) { /* ignore */ }
+      if (LIVE_TOPIC) showSetup();
+      else showError('That setup link is not valid. The topic can only use letters, numbers, - and _.');
+      return;
+    }
+    if (raw === null) { showSummary(toolsEnabled); return; }
     // Clean the address so a refresh or back-navigation cannot log the same wear twice.
     try { history.replaceState(null, '', window.location.pathname + window.location.hash); } catch (e) { /* ignore */ }
     if (!/^\d+$/.test(raw)) { showError('That tag is not recognised. Item numbers run from 0 to ' + ITEMS.length + '.'); return; }
