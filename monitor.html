@@ -6,112 +6,167 @@
 <title>Tag-to-Wear monitor</title>
 <style>
   :root {
-    --denim: #1F3350;
-    --label: #F4F6F8;
-    --ink: #14202F;
-    --muted: #566578;
-    --line: #D3DAE2;
-    --sticker: #FFD23F;
-    --alert: #B3261E;
-    --good: #1E6B3C;
-    --radius: 14px;
+    --denim: #1F3350; --page: #EEF1F5; --card: #FFFFFF; --ink: #14202F; --muted: #566578; --line: #D3DAE2;
+    --sticker: #FFD23F; --good: #17663A; --bad: #B3261E; --radius: 16px;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; }
-  body { background: var(--denim); color: var(--label); font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif; line-height: 1.4; min-height: 100vh; }
-  main { max-width: 70rem; margin: 0 auto; padding: 1.25rem 1rem 2.5rem; }
+  body { background: var(--page); color: var(--ink); font: 18px/1.45 "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif; min-height: 100vh; }
   h1, h2, p { margin: 0; }
-  header { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1rem; }
-  header h1 { font-size: 1.4rem; margin-right: auto; }
-  .pill { display: inline-block; padding: .25rem .8rem; border-radius: 999px; font-weight: 700; background: var(--label); color: var(--ink); }
+  .top { background: var(--denim); color: #fff; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; padding: .9rem 1.25rem; }
+  .top h1 { font-size: 1.2rem; margin-right: auto; }
+  .pill { padding: .2rem .8rem; border-radius: 999px; font-weight: 700; font-size: .95rem; background: #fff; color: var(--ink); }
   .pill.on { background: var(--sticker); }
-  .pill.off { background: var(--alert); color: #fff; }
-  .sr { position: absolute; left: -9999px; }
-  select, input, button {
-    font: inherit; min-height: 2.6rem; border-radius: 10px; border: 2px solid var(--label); background: transparent; color: var(--label); padding: .4rem .9rem; font-weight: 600;
-  }
-  button { cursor: pointer; }
-  select option { color: var(--ink); }
-  select:focus-visible, input:focus-visible, button:focus-visible { outline: 3px solid var(--sticker); outline-offset: 3px; }
-  .panel { background: var(--label); color: var(--ink); border-radius: var(--radius); padding: 1.1rem 1.25rem 1.25rem; }
-  .panel h2 { font-size: 1.1rem; margin-bottom: .6rem; }
-  .panel button, .panel select, .panel input { --fg: var(--ink); border-color: var(--ink); color: var(--ink); }
-  .panel input { background: #fff; }
-  .panel button.primary { background: var(--sticker); border-color: var(--sticker); }
-  .panel button.danger { color: var(--alert); border-color: var(--alert); }
-  .panel button[aria-pressed="true"] { background: var(--ink); color: var(--label); }
-  .panel button:disabled { opacity: .45; cursor: not-allowed; }
-  #controls { margin-top: 1rem; }
-  .row { display: flex; flex-wrap: wrap; gap: .6rem; align-items: end; margin-top: .75rem; }
-  .row label { display: grid; gap: .25rem; font-weight: 600; font-size: .9rem; }
-  .row input { width: 9rem; }
-  .grid { display: grid; gap: 1rem; margin-top: 1rem; grid-template-columns: 1fr; }
-  @media (min-width: 52rem) { .grid { grid-template-columns: 1.1fr .9fr; } }
-  .stack { display: grid; gap: 1rem; align-content: start; }
-  .now { display: grid; gap: .25rem; }
-  .big { font-size: 2.4rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
-  .meta { color: var(--muted); font-size: .95rem; }
-  .nums { display: flex; flex-wrap: wrap; gap: .5rem 1.75rem; margin-top: .75rem; font-variant-numeric: tabular-nums; }
-  .nums strong { font-size: 1.3rem; display: block; }
-  ol.script { list-style: none; margin: .5rem 0 0; padding: 0; }
-  ol.script li { display: grid; grid-template-columns: 2.2rem 1fr auto; gap: .5rem; padding: .5rem .4rem; border-top: 1px solid var(--line); align-items: center; }
-  ol.script li.next { background: var(--sticker); border-radius: 8px; font-weight: 700; }
-  ol.script .ok { color: var(--good); font-weight: 700; }
-  ol.script .bad { color: var(--alert); font-weight: 700; }
-  ol.script .wait { color: var(--muted); }
+  .pill.off { background: #8795A8; color: #fff; }
+  main { max-width: 72rem; margin: 0 auto; padding: 1.25rem; display: grid; gap: 1.25rem; }
+  .card { background: var(--card); border-radius: var(--radius); padding: 1.5rem; box-shadow: 0 1px 0 var(--line); }
+  .card h2 { font-size: 1.5rem; margin-bottom: .75rem; }
+  .label { color: var(--muted); font-size: 1rem; }
+  .hint { color: var(--muted); margin-top: .75rem; }
+  .cmdstat { padding: .7rem 1rem; border-radius: 10px; background: #fff; font-weight: 600; }
+  .good { color: var(--good); } .bad { color: var(--bad); }
+
+  button, input, select { font: inherit; border-radius: 12px; border: 2px solid var(--ink); background: #fff; color: var(--ink); padding: .55rem 1rem; min-height: 3rem; }
+  button { font-weight: 700; cursor: pointer; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 4px solid var(--sticker); outline-offset: 3px; }
+  .big { width: 100%; min-height: 4.25rem; font-size: 1.4rem; margin-top: 1.25rem; }
+  .primary { background: var(--sticker); border-color: var(--sticker); }
+  .danger { color: var(--bad); border-color: var(--bad); }
+  .small { min-height: 2.6rem; font-size: 1rem; }
+
+  .form { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .form label { display: grid; gap: .3rem; font-weight: 700; }
+  .form input { width: 12rem; font-size: 1.4rem; }
+  .form select { font-size: 1.4rem; }
+
+  .cols { display: grid; gap: 1.25rem; grid-template-columns: 1fr; }
+  @media (min-width: 56rem) { .cols { grid-template-columns: 1.25fr .75fr; } }
+  .head { color: var(--muted); font-weight: 700; margin-bottom: .75rem; }
+  .giant { font-size: clamp(2.6rem, 7vw, 5rem); font-weight: 800; letter-spacing: -.02em; line-height: 1.05; margin: .15rem 0 1rem; }
+  .stats { display: flex; flex-wrap: wrap; gap: .5rem 3rem; }
+  .num { font-size: 2.6rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .checks { margin-top: 1rem; font-weight: 700; font-size: 1.1rem; }
+  .banner { margin-top: 1rem; padding: .9rem 1rem; border-radius: 12px; background: #FFF3C4; border: 2px solid var(--sticker); font-weight: 600; }
+  .banner button { margin-top: .6rem; }
+
+  ol.script { list-style: none; margin: 0; padding: 0; }
+  ol.script li { display: grid; grid-template-columns: 2rem 1fr auto; gap: .5rem; padding: .55rem .5rem; border-top: 1px solid var(--line); align-items: center; font-size: 1.1rem; }
+  ol.script li:first-child { border-top: 0; }
+  ol.script li.next { background: var(--sticker); border-radius: 10px; font-weight: 800; }
+  .ok { color: var(--good); font-weight: 800; } .wrong { color: var(--bad); font-weight: 800; } .wait { color: var(--muted); }
+  .result { display: grid; gap: .25rem; margin-bottom: 1rem; }
+  .answers { margin-top: 1rem; padding: 1rem; border-radius: 12px; background: var(--page); }
+  .answers p + p { margin-top: .35rem; }
+  .row { display: flex; flex-wrap: wrap; gap: .75rem; }
+  .row > button { flex: 1 1 14rem; }
+
+  details.more summary { cursor: pointer; font-weight: 700; font-size: 1.1rem; }
+  details.more .row { margin-top: 1rem; }
+  details.more h3 { margin: 1.25rem 0 .4rem; font-size: 1.05rem; }
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-  th, td { text-align: left; padding: .45rem .3rem; border-top: 1px solid var(--line); }
-  th { color: var(--muted); font-size: .9rem; border-top: 0; }
-  td.num, th.num { text-align: right; }
-  .feed { list-style: none; margin: 0; padding: 0; max-height: 26rem; overflow: auto; font-variant-numeric: tabular-nums; }
-  .feed li { padding: .4rem .2rem; border-top: 1px solid var(--line); font-size: .95rem; }
-  .feed li:first-child { border-top: 0; }
-  .tag { color: var(--muted); }
-  .empty { color: var(--muted); }
-  .good { color: var(--good); font-weight: 700; }
-  .bad { color: var(--alert); font-weight: 700; }
-  .note { margin-top: 1rem; color: #9FB0C5; font-size: .85rem; }
+  th, td { text-align: left; padding: .35rem .3rem; border-top: 1px solid var(--line); }
+  th { color: var(--muted); border-top: 0; } td.n, th.n { text-align: right; }
+  ul.feed { list-style: none; margin: 0; padding: 0; max-height: 18rem; overflow: auto; font-variant-numeric: tabular-nums; }
+  ul.feed li { padding: .3rem 0; border-top: 1px solid var(--line); }
+  .foot { color: var(--muted); font-size: .95rem; }
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <h1>Tag-to-Wear monitor</h1>
-    <span id="conn" class="pill off">Connecting…</span>
-    <label class="sr" for="session">Session</label>
-    <select id="session" aria-label="Session"></select>
-    <button id="csv" type="button">Download CSV</button>
-  </header>
+<header class="top">
+  <h1>Tag-to-Wear monitor</h1>
+  <span id="relay" class="pill off">Connecting…</span>
+  <span id="phone" class="pill off">Phone not seen</span>
+</header>
 
-  <section id="controls" class="panel" aria-label="Phone control">
-    <h2>Phone control</h2>
-    <p id="phonestat" class="meta">Phone not seen yet. Open the study page on the phone.</p>
-    <div class="row">
-      <label>Participant code <input id="code" maxlength="12" autocomplete="off"></label>
-      <label>Scripted week <select id="week"><option value="A">Week A</option><option value="B">Week B</option></select></label>
-      <button id="b-setup" type="button">Set code and week</button>
-    </div>
-    <div class="row">
-      <button id="b-start" type="button" class="primary">Start block (reset counts, mark GO)</button>
-      <button id="b-end" type="button">End block (stop the clock)</button>
-      <button id="b-summary" type="button">Show all items on phone</button>
-      <button id="b-rank" type="button" aria-pressed="false">Rank list on phone: off</button>
-      <button id="b-ping" type="button">Test connection</button>
-      <button id="b-erase" type="button" class="danger">Erase phone data</button>
-    </div>
-    <p id="cmdstat" class="meta" role="status" style="margin-top:.75rem"></p>
+<main>
+  <p id="cmdstat" class="cmdstat" role="status" hidden></p>
+
+  <section id="notopic" class="card" hidden>
+    <h2>Set your topic</h2>
+    <p>Open this page as <strong>monitor.html?topic=YOUR-PRIVATE-TOPIC</strong> (letters, numbers, - and _ only). Use the same topic on the phone. It is remembered in this browser.</p>
   </section>
 
-  <div id="view"></div>
-  <p class="note">Controls only work while the study page is open and showing on the phone (screen on), and only on the newest session. The phone keeps the full record, so also export from its Researcher tools. The automatic script check is a guide; confirm errors against the CSV. Keep this screen out of the participant's view.</p>
+  <!-- 1. Ready -->
+  <section id="v-idle" class="card" hidden>
+    <h2>Ready for the next participant</h2>
+    <div class="form">
+      <label>Participant code <input id="code" maxlength="12" autocomplete="off"></label>
+      <label>Week for the Tag condition
+        <select id="week"><option value="A">Week A</option><option value="B">Week B</option></select>
+      </label>
+    </div>
+    <p id="plan" class="hint"></p>
+    <button id="b-start" type="button" class="big primary">Start run</button>
+    <p id="idle-msg" class="bad" role="alert"></p>
+    <p class="hint">Press Start when the participant is holding the phone, after the practice scan. It works even if the phone is not connected: the timer then runs on this screen and the phone only logs what it scans.</p>
+  </section>
+
+  <!-- 2. Running -->
+  <div id="v-run" class="cols" hidden>
+    <section class="card">
+      <p id="run-head" class="head"></p>
+      <p class="label">Read next</p>
+      <p id="next" class="giant" aria-live="polite"></p>
+      <div class="stats">
+        <div><p id="timer" class="num">0:00.0</p><p class="label">Time</p></div>
+        <div><p id="progress" class="num">0 / 10</p><p class="label">Scans</p></div>
+      </div>
+      <p id="checks" class="checks"></p>
+      <div id="banner" class="banner" hidden>
+        <span id="banner-text"></span><br>
+        <button id="b-retry" type="button" class="small">Reset phone again</button>
+      </div>
+      <button id="b-end" type="button" class="big">End run</button>
+    </section>
+    <section class="card"><h2>Script check</h2><ol id="script-run" class="script"></ol></section>
+  </div>
+
+  <!-- 3. Finished -->
+  <div id="v-done" class="cols" hidden>
+    <section class="card">
+      <p id="done-head" class="head"></p>
+      <div class="result">
+        <p class="label">Time to last scan <span id="basis" class="label"></span></p>
+        <p id="done-time" class="num">–</p>
+        <p id="done-summary" class="checks"></p>
+        <p id="done-end" class="label"></p>
+      </div>
+      <div class="answers" id="answers"></div>
+      <div class="row" style="margin-top:1.25rem">
+        <button id="b-csv" type="button" class="primary">Download CSV</button>
+        <button id="b-new" type="button">New participant</button>
+      </div>
+      <p id="done-note" class="hint"></p>
+    </section>
+    <section class="card"><h2>Script check</h2><ol id="script-done" class="script"></ol></section>
+  </div>
+
+  <details id="more" class="card more">
+    <summary>More controls and details</summary>
+    <div class="row">
+      <button id="b-summary" type="button" class="small">Show all items on phone</button>
+      <button id="b-rank" type="button" class="small" aria-pressed="false">Rank list on phone: off</button>
+      <button id="b-ping" type="button" class="small">Test connection</button>
+      <button id="b-reset" type="button" class="small">Reset phone (send Start again)</button>
+      <button id="b-cancel" type="button" class="small">Cancel this run</button>
+      <button id="b-erase" type="button" class="small danger">Erase phone data</button>
+    </div>
+    <h3>Wear counts</h3>
+    <table id="counts"></table>
+    <h3>Event feed</h3>
+    <ul id="feed" class="feed"></ul>
+  </details>
+
+  <p class="foot">Controls reach the phone only while its study page is open and showing (screen on). The phone keeps the full record, so also export from its tools link. The script check is a guide; confirm errors against the CSV. Keep this screen out of the participant's view.</p>
 </main>
 
 <script>
 (() => {
   'use strict';
 
-  // The topic is not stored in this file (the repo is public). Open this page with ?topic=YOUR-TOPIC
-  // once; it is remembered in this browser. It must match the topic given to the phone page.
+  // The topic is not stored in this file (the repo is public). Open this page with ?topic=YOUR-TOPIC once.
   const LIVE_BASE = 'https://ntfy.sh/';
   const params = new URLSearchParams(location.search);
   let topic = (params.get('topic') || '').trim();
@@ -120,6 +175,7 @@
   const CTL_URL = LIVE_BASE + encodeURIComponent(topic) + '-ctl';
   const ACK_TIMEOUT = Number(params.get('ackTimeout')) || 8000;
   const ONLINE_WITHIN = 45000;
+  const WINDOW_SLACK = 1500;
 
   // Keep in step with index.html and the study kit.
   const ITEMS = {
@@ -127,21 +183,29 @@
     5: ['Flannel shirt', 60], 6: ['Sneakers', 110], 7: ['Beanie', 20], 8: ['Raincoat', 150]
   };
   const SCRIPTS = { A: [1, 4, 1, 6, 4, 3, 1, 6, 7, 4], B: [2, 5, 8, 2, 3, 5, 2, 8, 5, 4] };
+  // Counterbalancing table from the study kit, repeating every 4 participants.
+  const PLAN = [{ tagFirst: true, week: 'A' }, { tagFirst: false, week: 'B' }, { tagFirst: true, week: 'B' }, { tagFirst: false, week: 'A' }];
   const name = id => (ITEMS[id] ? ITEMS[id][0] : 'Item ' + id);
   const fmt = n => '$' + n.toFixed(2);
+  const $ = id => document.getElementById(id);
+  const rid = () => Math.random().toString(36).slice(2, 8);
+  function clock(ms) { ms = Math.max(0, ms); const t = Math.floor(ms / 100) / 10; return Math.floor(t / 60) + ':' + (t % 60).toFixed(1).padStart(4, '0'); }
   const secs = ms => (ms / 1000).toFixed(1) + ' s';
 
-  // sid -> { sid, events: Map(id -> event), lastServer, phone }
-  const sessions = new Map();
-  const serverTime = {};
-  const pending = new Map();   // cid -> { label, sentAt, done, ok, note, snap, failed }
-  let selected = null, lastCid = null, codeTouched = false;
+  // ---- monitor's own state: the current run survives a page reload ----
+  const STORE = 'tagtowear.monitor.v1';
+  let M = { run: null, lastCode: '' };
+  try { const raw = localStorage.getItem(STORE); if (raw) M = Object.assign(M, JSON.parse(raw)); } catch (e) { /* ignore */ }
+  const saveM = () => { try { localStorage.setItem(STORE, JSON.stringify(M)); } catch (e) { /* ignore */ } };
+  const status = () => !M.run ? 'idle' : M.run.endedAt ? 'done' : 'run';
 
-  function getSession(sid) {
-    let s = sessions.get(sid);
-    if (!s) { s = { sid, events: new Map(), lastServer: 0, phone: null }; sessions.set(sid, s); }
-    return s;
-  }
+  // ---- data from the relay ----
+  const sessions = new Map();     // sid -> { sid, events: Map(id -> ev), lastServer, phone }
+  const pending = new Map();      // cid -> command progress
+  let lastCid = null;
+
+  function getSession(sid) { let s = sessions.get(sid); if (!s) { s = { sid, events: new Map(), lastServer: 0, phone: null }; sessions.set(sid, s); } return s; }
+  const newest = () => [...sessions.values()].sort((a, b) => b.lastServer - a.lastServer)[0] || null;
 
   function ingest(raw) {
     let m; try { m = JSON.parse(raw); } catch (e) { return; }
@@ -151,35 +215,37 @@
     const srv = (m.time || 0) * 1000;
     const s = getSession(ev.sid);
     s.lastServer = Math.max(s.lastServer, srv);
-    const snap = () => ({ participant: ev.participant || '', week: ev.week || '', block: ev.block || 0, wears: ev.wears || 0, ranked: !!ev.ranked });
+    const snap = () => ({ participant: ev.participant || '', week: ev.week || '', run: ev.run || '', block: ev.block || 0, wears: ev.wears || 0, ranked: !!ev.ranked });
     if (ev.type === 'presence') { s.phone = snap(); return; }
     if (ev.type === 'ack') {
       s.phone = snap();
       const p = pending.get(ev.cid);
-      if (p) { p.done = true; p.ok = ev.ok !== false; p.note = ev.note || ''; p.snap = snap(); p.at = Date.now(); }
+      if (p) {
+        p.done = true; p.ok = ev.ok !== false; p.note = ev.note || ''; p.snap = snap();
+        if (p.cmd === 'start' && p.ok && M.run && p.run === M.run.id && !M.run.confirmed) { M.run.confirmed = true; saveM(); }
+      }
       return;
     }
     if (ev.id == null || !ev.type) return;
-    if (s.events.has(ev.id)) return; // duplicate (resend or replay)
+    if (s.events.has(ev.id)) return;
+    ev._srv = srv;
     s.events.set(ev.id, ev);
-    serverTime[ev.sid + ':' + ev.id] = srv;
   }
 
-  function analyse(session) {
-    const evs = [...session.events.values()].sort((a, b) => a.id - b.id);
+  // ---- analysis of the current run ----
+  function analyse(run) {
+    const s = newest();
+    const evs = s ? [...s.events.values()].sort((a, b) => a.id - b.id) : [];
+    const lo = run.startedAt - WINDOW_SLACK, hi = run.endedAt ? run.endedAt + WINDOW_SLACK : Infinity;
+    const inWin = e => e._srv >= lo && e._srv <= hi;
     const undone = new Set(evs.filter(e => e.type === 'undo').map(e => e.ref));
-    const block = evs.reduce((m, e) => Math.max(m, e.block), 0);
-    const go = [...evs].reverse().find(e => e.type === 'go' && e.block === block) || null;
-    const end = go ? ([...evs].reverse().find(e => e.type === 'end' && e.block === block && e.id > go.id) || null) : null;
-    const wears = evs.filter(e => e.type === 'wear' && e.block === block && !undone.has(e.id));
-    const last = evs[evs.length - 1];
-    const ph = session.phone || {};
-    const week = (go || last || {}).week || ph.week || 'A';
-    const participant = (go || last || {}).participant || ph.participant || '';
+    const wears = evs.filter(e => e.type === 'wear' && inWin(e) && !undone.has(e.id));
+    const go = evs.find(e => e.type === 'go' && e.run === run.id) || null;
+    const last = wears[wears.length - 1] || null;
+    const expected = SCRIPTS[run.week] || SCRIPTS.A;
     const scans = wears.map(e => e.item);
-    const expected = SCRIPTS[week] || SCRIPTS.A;
 
-    // Greedy check of scans against the script: match, one-skip (missed), or wrong item.
+    // Greedy check of scans against the script: match, one skipped event, or a wrong item.
     const rows = expected.map((item, i) => ({ i, item, status: 'pending', got: null }));
     const extras = [];
     let p = 0;
@@ -189,215 +255,217 @@
       else if (p + 1 < expected.length && sc === expected[p + 1]) { rows[p].status = 'missed'; rows[p + 1].status = 'ok'; rows[p + 1].got = sc; p += 2; }
       else { rows[p].status = 'wrong'; rows[p].got = sc; p++; }
     }
-    const counts = {};
-    scans.forEach(i => { counts[i] = (counts[i] || 0) + 1; });
-    return {
-      evs, undone, block, go, end, wears, last, week, participant, scans, expected, rows, extras, next: p, counts,
-      practice: evs.some(e => e.type === 'practice'),
-      undos: evs.filter(e => e.type === 'undo' && e.block === block).length,
-      ignored: evs.filter(e => e.type === 'ignored' && e.block === block).length
-    };
+    const exact = !!(go && last);
+    const toLast = last ? (exact ? last.t - go.t : last._srv - run.startedAt) : null;
+    const window = evs.filter(e => inWin(e) || (e.run === run.id && (e.type === 'go' || e.type === 'end')));
+    return { s, evs, undone, wears, go, last, expected, scans, rows, extras, next: p, exact, toLast, window,
+      wrong: rows.filter(r => r.status === 'wrong').length, missed: rows.filter(r => r.status === 'missed').length };
   }
 
-  function el(tag, attrs, ...kids) {
-    const n = document.createElement(tag);
-    for (const [k, v] of Object.entries(attrs || {})) { if (k === 'class') n.className = v; else if (v != null && v !== false) n.setAttribute(k, v === true ? '' : v); }
-    for (const kid of kids.flat()) { if (kid == null || kid === false) continue; n.append(kid.nodeType ? kid : document.createTextNode(String(kid))); }
-    return n;
-  }
-  const $ = id => document.getElementById(id);
-  const view = $('view'), sel = $('session'), conn = $('conn');
-
-  const byRecent = () => [...sessions.values()].sort((a, b) => b.lastServer - a.lastServer);
-  const newest = () => byRecent()[0] || null;
-  function currentSession() { return (selected && sessions.get(selected)) || newest(); }
-
-  function render() {
-    const list = byRecent();
-    const cur = currentSession();
-    sel.replaceChildren(...(list.length ? list.map(s => {
-      const a = analyse(s);
-      const o = el('option', { value: s.sid }, (a.participant || 'no code') + ', week ' + a.week + ' (' + s.sid + ', ' + s.events.size + ' events)' + (s === list[0] ? ' · newest' : ''));
-      if (cur && cur.sid === s.sid) o.selected = true;
-      return o;
-    }) : [el('option', {}, 'No sessions yet')]));
-    updateControls();
-
-    if (!cur) {
-      view.replaceChildren(el('section', { class: 'panel', style: 'margin-top:1rem' },
-        el('h2', {}, 'Waiting for the phone'),
-        el('p', { class: 'empty' }, 'Open the study page on the phone. It shows up here within a few seconds. If nothing appears, check that the phone and this page use the same topic.')));
-      return;
-    }
-    const a = analyse(cur);
-    const goMs = a.go ? a.go.t : null;
-    const lastWear = a.wears.length ? a.wears[a.wears.length - 1].t : null;
-    const goServer = a.go ? serverTime[cur.sid + ':' + a.go.id] : null;
-
-    const now = el('section', { class: 'panel now' },
-      el('h2', {}, 'Now'),
-      el('p', { class: 'big' }, (a.participant || 'No code') + ' · week ' + a.week),
-      el('p', { class: 'meta' }, a.block ? 'Block ' + a.block + (a.end ? ' · stopped' : ' · running') + (a.practice ? ' · practice scan done' : ' · no practice scan logged') : 'No block started yet. Scans are logged but not timed.'),
-      el('div', { class: 'nums' },
-        el('div', {}, el('strong', {}, a.scans.length + ' / ' + a.expected.length), 'scans logged'),
-        el('div', {}, el('strong', { id: 'since' }, goServer && !a.end ? secs(Date.now() - goServer) : '–'), 'since GO (approx, live)'),
-        el('div', {}, el('strong', {}, goMs && lastWear ? secs(lastWear - goMs) : '–'), 'GO to last wear'),
-        el('div', {}, el('strong', {}, goMs && a.end ? secs(a.end.t - goMs) : '–'), 'GO to END (your stop)'),
-        el('div', {}, el('strong', {}, String(a.undos)), 'undos'),
-        el('div', {}, el('strong', {}, String(a.ignored)), 'duplicate loads ignored')));
-
-    const nextItem = a.next < a.expected.length ? a.expected[a.next] : null;
-    const wrong = a.rows.filter(r => r.status === 'wrong').length;
-    const missed = a.rows.filter(r => r.status === 'missed').length;
-    const script = el('section', { class: 'panel' },
-      el('h2', {}, nextItem ? 'Read next: ' + (a.next + 1) + '. ' + name(nextItem) : 'All ' + a.expected.length + ' events read'),
-      el('p', { class: 'meta' }, 'Wrong item: ' + wrong + ' · Missed: ' + missed + ' · Extra scans: ' + a.extras.length +
-        (a.next < a.expected.length ? ' (unread events are not counted as missed)' : '')),
-      el('ol', { class: 'script' }, a.rows.map(r => el('li', { class: r.i === a.next && r.status === 'pending' ? 'next' : '' },
-        el('span', { class: 'tag' }, String(r.i + 1)),
-        el('span', {}, name(r.item)),
-        r.status === 'ok' ? el('span', { class: 'ok' }, '✓ scanned') :
-        r.status === 'wrong' ? el('span', { class: 'bad' }, 'scanned ' + name(r.got)) :
-        r.status === 'missed' ? el('span', { class: 'bad' }, 'skipped') :
-        el('span', { class: 'wait' }, r.i === a.next ? 'read this one' : 'waiting')))),
-      a.extras.length ? el('p', { class: 'meta', style: 'margin-top:.5rem' }, 'Extra scans after the script: ' + a.extras.map(name).join(', ')) : null);
-
-    const rowsC = Object.keys(ITEMS).map(id => { const n = a.counts[id] || 0; return { id, n, cpw: n ? ITEMS[id][1] / n : null }; });
-    const table = el('section', { class: 'panel' },
-      el('h2', {}, 'Wear counts (matches the phone)'),
-      el('table', {},
-        el('tr', {}, el('th', {}, 'Item'), el('th', { class: 'num' }, 'Wears'), el('th', { class: 'num' }, 'Cost per wear')),
-        rowsC.map(r => el('tr', {}, el('td', {}, name(r.id)), el('td', { class: 'num' }, String(r.n)), el('td', { class: 'num' }, r.cpw === null ? 'Not worn' : fmt(r.cpw))))));
-
-    const feed = el('section', { class: 'panel' },
-      el('h2', {}, 'Event feed'),
-      el('ul', { class: 'feed' }, [...a.evs].reverse().map(e => {
-        const rel = goMs && e.block === a.block ? '+' + ((e.t - goMs) / 1000).toFixed(1) + ' s' : new Date(e.t).toLocaleTimeString();
-        const label = e.type === 'wear' ? 'Wear: ' + name(e.item) + (a.undone.has(e.id) ? ' (undone)' : '')
-          : e.type === 'undo' ? 'Undo' : e.type === 'go' ? 'GO (block ' + e.block + ' started)' : e.type === 'end' ? 'END (stopped from the monitor)'
-          : e.type === 'practice' ? 'Practice scan' : e.type === 'ignored' ? 'Duplicate load ignored: ' + name(e.item) : e.type;
-        return el('li', {}, el('span', { class: 'tag' }, rel + '  '), label);
-      })));
-
-    view.replaceChildren(el('div', { class: 'grid' }, el('div', { class: 'stack' }, now, script), el('div', { class: 'stack' }, table, feed)));
+  function answersFor(week) {
+    const sc = SCRIPTS[week] || SCRIPTS.A, counts = {};
+    sc.forEach(i => { counts[i] = (counts[i] || 0) + 1; });
+    let lo = null, hi = null;
+    Object.keys(counts).forEach(id => { const c = ITEMS[id][1] / counts[id]; if (!lo || c < lo.c) lo = { id, c }; if (!hi || c > hi.c) hi = { id, c }; });
+    return { lo, hi, unworn: Object.keys(ITEMS).filter(id => !counts[id]) };
   }
 
-  // ---------------- Phone control ----------------
-  function updateControls() {
-    const cur = currentSession(), top = newest();
-    const isNewest = !!cur && cur === top;
-    const ph = cur && cur.phone;
-    const age = cur ? Date.now() - cur.lastServer : Infinity;
-    const stat = $('phonestat');
-    if (!cur) stat.textContent = 'Phone not seen yet. Open the study page on the phone.';
-    else {
-      const detail = ph ? ' · ' + (ph.participant || 'no code') + ' · week ' + ph.week + ' · block ' + ph.block + ' · ' + ph.wears + ' wears' : '';
-      if (age < ONLINE_WITHIN) { stat.textContent = 'Phone online, last seen ' + Math.max(0, Math.round(age / 1000)) + ' s ago' + detail; stat.className = 'meta good'; }
-      else { stat.textContent = 'Phone not seen for ' + Math.round(age / 1000) + ' s. Controls only work while the study page is open on the phone with the screen on.'; stat.className = 'meta bad'; }
-      if (!isNewest) stat.textContent += ' · You are viewing an older session; pick the newest to control the phone.';
-    }
-    ['b-setup', 'b-start', 'b-end', 'b-summary', 'b-rank', 'b-ping', 'b-erase'].forEach(id => { $(id).disabled = !isNewest; });
-    const ranked = !!(ph && ph.ranked);
-    $('b-rank').setAttribute('aria-pressed', String(ranked));
-    $('b-rank').textContent = 'Rank list on phone: ' + (ranked ? 'on' : 'off');
-    if (!codeTouched && ph && ph.participant && document.activeElement !== $('code')) $('code').value = ph.participant;
-  }
-
-  function updateCmdStat() {
-    const st = $('cmdstat');
-    const p = lastCid && pending.get(lastCid);
-    if (!p) { st.textContent = ''; st.className = 'meta'; return; }
-    if (p.failed) { st.textContent = 'Could not send "' + p.label + '": ' + p.failed + '. Check the laptop is online.'; st.className = 'meta bad'; return; }
-    if (p.done) {
-      const s = p.snap || {};
-      st.textContent = (p.ok ? '✓ ' : '✗ ') + p.label + (p.ok ? ' done' : ' refused') + (p.note ? ': ' + p.note : '') +
-        ' (phone: ' + (s.participant || 'no code') + ', week ' + s.week + ', block ' + s.block + ', ' + s.wears + ' wears)';
-      st.className = p.ok ? 'meta good' : 'meta bad'; return;
-    }
-    if (Date.now() - p.sentAt > ACK_TIMEOUT) {
-      st.textContent = 'No reply from the phone to "' + p.label + '". It was probably not applied. Check the study page is open with the screen on, then press again.';
-      st.className = 'meta bad'; return;
-    }
-    st.textContent = 'Sent "' + p.label + '", waiting for the phone…'; st.className = 'meta';
-  }
-
+  // ---- commands to the phone ----
   async function send(cmd, extra, label) {
-    const cur = currentSession();
-    if (!cur || cur !== newest()) { $('cmdstat').textContent = 'Pick the newest session first.'; return; }
-    const cid = Math.random().toString(36).slice(2, 10);
-    const p = { label, sentAt: Date.now(), done: false };
-    pending.set(cid, p); lastCid = cid; updateCmdStat();
+    const cid = rid(), cur = newest();
+    const p = { label, cmd, run: extra && extra.run, sentAt: Date.now(), done: false };
+    pending.set(cid, p); lastCid = cid;
+    if (!cur) { p.failed = 'the phone has not been seen yet'; return cid; }
     try {
       const r = await fetch(CTL_URL, { method: 'POST', body: JSON.stringify(Object.assign({ type: 'cmd', cid, sid: cur.sid, cmd }, extra || {})) });
       if (!r.ok) throw new Error('HTTP ' + r.status);
     } catch (e) { p.failed = String((e && e.message) || e); }
-    updateCmdStat();
+    return cid;
   }
+  function sendStart() { const r = M.run; if (r) return send('start', { participant: r.participant, week: r.week, run: r.id }, 'Start'); }
 
-  function csvFor(session) {
-    const a = analyse(session);
-    const goT = {};
-    a.evs.filter(e => e.type === 'go').forEach(e => { goT[e.block] = e.t; });
-    const q = s => { s = String(s == null ? '' : s); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-    const lines = ['session,block,participant,week,event,item_id,item_name,timestamp_iso,seconds_since_go,undone,ref'];
-    a.evs.forEach(e => lines.push([session.sid, e.block, e.participant, e.week, e.type, e.item == null ? '' : e.item,
-      e.item ? name(e.item) : '', new Date(e.t).toISOString(), e.block > 0 && goT[e.block] != null ? ((e.t - goT[e.block]) / 1000).toFixed(1) : '',
-      e.type === 'wear' && a.undone.has(e.id) ? 'yes' : '', e.ref == null ? '' : e.ref].map(q).join(',')));
+  // ---- CSV ----
+  function csvFor(run) {
+    const a = analyse(run), q = s => { s = String(s == null ? '' : s); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const lines = ['run,participant,week,event,item_id,item_name,phone_time_iso,seconds_since_start,timing,undone,ref'];
+    a.window.forEach(e => {
+      const t = a.go ? (e.t - a.go.t) / 1000 : (e._srv - run.startedAt) / 1000;
+      lines.push([run.id, run.participant, run.week, e.type, e.item == null ? '' : e.item, e.item ? name(e.item) : '', new Date(e.t).toISOString(),
+        t.toFixed(1), a.go ? 'phone clock' : 'approx', e.type === 'wear' && a.undone.has(e.id) ? 'yes' : '', e.ref == null ? '' : e.ref].map(q).join(','));
+    });
     return lines.join('\n');
   }
-  function downloadCsv(session) {
-    const a = analyse(session);
-    const link = el('a', { href: URL.createObjectURL(new Blob([csvFor(session)], { type: 'text/csv' })), download: 'monitor-' + (a.participant || session.sid) + '.csv' });
-    document.body.append(link); link.click(); link.remove();
+  function download(run) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csvFor(run)], { type: 'text/csv' }));
+    a.download = 'tag-to-wear-' + (run.participant || run.id) + '-week' + run.week + '.csv';
+    document.body.append(a); a.click(); a.remove();
+    run.downloaded = true; saveM();
   }
 
-  // Controls
-  $('code').addEventListener('input', () => { codeTouched = true; });
-  const meta = () => { const o = { week: $('week').value }; const c = $('code').value.trim(); if (c) o.participant = c; return o; };
-  $('b-setup').addEventListener('click', () => send('setup', meta(), 'Set code and week'));
-  $('b-start').addEventListener('click', () => {
-    if (!$('code').value.trim() && !window.confirm('No participant code is set. Start the block anyway?')) return;
-    if (!window.confirm('Start the block now? This resets the wear counts on the phone and marks GO.')) return;
-    send('start', meta(), 'Start block');
+  // ---- screens ----
+  const nextCode = prev => { const m = /^P(\d+)$/i.exec((prev || '').trim()); return m ? 'P' + (Number(m[1]) + 1) : (prev ? '' : 'P1'); };
+  function planFor(code) { const m = /^P(\d+)$/i.exec((code || '').trim()); if (!m) return null; const n = Number(m[1]); return Object.assign({ n }, PLAN[(n - 1) % PLAN.length]); }
+  let weekTouched = false;
+  function resetForm() { $('code').value = nextCode(M.lastCode); weekTouched = false; applyPlan(); }
+  function applyPlan() {
+    const pl = planFor($('code').value);
+    if (pl && !weekTouched) $('week').value = pl.week;
+    $('plan').textContent = pl ? 'Study kit plan for P' + pl.n + ': ' + (pl.tagFirst ? 'Tag goes first' : 'Spreadsheet goes first') + ', Week ' + pl.week + ' with Tag.' : '';
+  }
+
+  function li(r) {
+    const mark = r.status === 'ok' ? ['ok', '✓ scanned'] : r.status === 'wrong' ? ['wrong', '✗ scanned ' + name(r.got)] : r.status === 'missed' ? ['wrong', '✗ skipped'] : ['wait', ''];
+    const row = document.createElement('li'); row.dataset.s = r.status;
+    const n = document.createElement('span'); n.className = 'wait'; n.textContent = String(r.i + 1);
+    const t = document.createElement('span'); t.textContent = name(r.item);
+    const m = document.createElement('span'); m.className = mark[0]; m.textContent = mark[1];
+    row.append(n, t, m); return row;
+  }
+  const sigs = {};
+  function fillScript(id, a, markNext) {
+    const sig = a.rows.map(r => r.status + ':' + r.got).join('|') + '|' + a.next + '|' + markNext;
+    if (sigs[id] === sig) return; sigs[id] = sig;
+    const list = $(id); list.replaceChildren(...a.rows.map(r => { const e = li(r); if (markNext && r.i === a.next && r.status === 'pending') e.className = 'next'; return e; }));
+    if (a.extras.length) { const x = document.createElement('li'); x.style.gridTemplateColumns = '1fr'; x.className = 'wrong'; x.textContent = 'Extra scans after the script: ' + a.extras.map(name).join(', '); list.append(x); }
+  }
+
+  function update() {
+    if (!topicOK) return;
+    const st = status(), cur = newest();
+
+    // header pills
+    const age = cur ? Date.now() - cur.lastServer : Infinity;
+    $('phone').textContent = age < ONLINE_WITHIN ? 'Phone online' : cur ? 'Phone not seen for ' + Math.round(age / 1000) + ' s' : 'Phone not seen';
+    $('phone').className = 'pill ' + (age < ONLINE_WITHIN ? 'on' : 'off');
+
+    $('v-idle').hidden = st !== 'idle'; $('v-run').hidden = st !== 'run'; $('v-done').hidden = st !== 'done';
+
+    if (st === 'run') {
+      const run = M.run, a = analyse(run), n = a.expected.length;
+      $('run-head').textContent = 'Running · ' + run.participant + ' · Week ' + run.week;
+      $('next').textContent = a.next < n ? (a.next + 1) + '. ' + name(a.expected[a.next]) : 'All ' + n + ' read';
+      $('timer').textContent = clock(Date.now() - run.startedAt);
+      $('progress').textContent = a.scans.length + ' / ' + n;
+      $('checks').textContent = 'Wrong ' + a.wrong + ' · Skipped ' + a.missed + ' · Extra ' + a.extras.length;
+      const confirmed = run.confirmed || !!a.go;
+      const waited = Date.now() - run.startedAt > ACK_TIMEOUT;
+      const p = run.startCid && pending.get(run.startCid);
+      const banner = !confirmed && (waited || (p && p.failed));
+      $('banner').hidden = !banner;
+      if (banner) $('banner-text').textContent = (p && p.failed ? 'Could not reach the phone (' + p.failed + '). ' : 'The phone did not confirm the start. ') +
+        'Timing here is approximate and the phone\'s counts may include earlier scans. Open the study page on the phone, then reset it. Only do this before the participant starts scanning.';
+      $('b-end').textContent = a.next >= n ? 'End run (all read)' : 'End run';
+      fillScript('script-run', a, true);
+    }
+
+    if (st === 'done') {
+      const run = M.run, a = analyse(run), n = a.expected.length, ans = answersFor(run.week);
+      $('done-head').textContent = 'Finished · ' + run.participant + ' · Week ' + run.week;
+      $('done-time').textContent = a.toLast == null ? '–' : secs(a.toLast);
+      $('basis').textContent = a.toLast == null ? '' : a.exact ? '(phone clock, exact)' : '(approximate)';
+      $('done-summary').textContent = a.scans.length + ' of ' + n + ' scans · Wrong ' + a.wrong + ' · Skipped ' + a.missed + ' · Extra ' + a.extras.length;
+      $('done-end').textContent = 'Start to End on this screen: ' + secs(run.endedAt - run.startedAt);
+      $('answers').replaceChildren(...[
+        ['Answers to the check questions', true],
+        ['Lowest cost per wear: ' + name(ans.lo.id) + ' (' + fmt(ans.lo.c) + ')'],
+        ['Highest cost per wear: ' + name(ans.hi.id) + ' (' + fmt(ans.hi.c) + ')'],
+        ['Not worn: ' + ans.unworn.map(name).join(', ')]
+      ].map(([t, b]) => { const e = document.createElement('p'); e.textContent = t; if (b) e.style.fontWeight = '800'; return e; }));
+      $('done-note').textContent = run.downloaded ? 'CSV downloaded. Press New participant when ready.' : 'Download the CSV before starting the next participant.';
+      $('b-csv').classList.toggle('primary', !run.downloaded);
+      $('b-new').classList.toggle('primary', !!run.downloaded);
+      fillScript('script-done', a, false);
+    }
+
+    // command status line
+    const p = lastCid && pending.get(lastCid), box = $('cmdstat');
+    if (!p) box.hidden = true;
+    else {
+      box.hidden = false;
+      if (p.failed) { box.textContent = '✗ ' + p.label + ' not sent: ' + p.failed + '.'; box.className = 'cmdstat bad'; }
+      else if (p.done) { const s = p.snap || {}; box.textContent = (p.ok ? '✓ ' : '✗ ') + p.label + (p.ok ? ' done' : ' refused') + (p.note ? ': ' + p.note : '') + ' (phone: ' + (s.participant || 'no code') + ', ' + s.wears + ' wears)'; box.className = 'cmdstat ' + (p.ok ? 'good' : 'bad'); }
+      else if (Date.now() - p.sentAt > ACK_TIMEOUT) { box.textContent = 'No reply from the phone to "' + p.label + '". Is the study page open with the screen on?'; box.className = 'cmdstat bad'; }
+      else { box.textContent = 'Sent "' + p.label + '", waiting for the phone…'; box.className = 'cmdstat'; }
+    }
+
+    // more panel
+    const ph = cur && cur.phone;
+    $('b-rank').setAttribute('aria-pressed', String(!!(ph && ph.ranked)));
+    $('b-rank').textContent = 'Rank list on phone: ' + (ph && ph.ranked ? 'on' : 'off');
+    $('b-reset').disabled = !M.run; $('b-cancel').disabled = !M.run;
+    ['b-summary', 'b-rank', 'b-ping', 'b-erase'].forEach(id => { $(id).disabled = !cur; });
+    if ($('more').open) {
+      const a = M.run ? analyse(M.run) : null, counts = {};
+      (a ? a.wears : []).forEach(e => { counts[e.item] = (counts[e.item] || 0) + 1; });
+      const sig = JSON.stringify(counts) + (a ? a.window.length : 0);
+      if (sigs.more !== sig) {
+        sigs.more = sig;
+        const head = document.createElement('tr'); head.innerHTML = '<th>Item</th><th class="n">Wears</th><th class="n">Cost per wear</th>';
+        $('counts').replaceChildren(head, ...Object.keys(ITEMS).map(id => { const c = counts[id] || 0, r = document.createElement('tr');
+          [name(id), String(c), c ? fmt(ITEMS[id][1] / c) : 'Not worn'].forEach((t, i) => { const td = document.createElement('td'); if (i) td.className = 'n'; td.textContent = t; r.append(td); }); return r; }));
+        $('feed').replaceChildren(...(a ? [...a.window].reverse() : []).slice(0, 40).map(e => { const x = document.createElement('li');
+          x.textContent = new Date(e.t).toLocaleTimeString() + '  ' + (e.type === 'wear' ? 'Wear: ' + name(e.item) + (a.undone.has(e.id) ? ' (undone)' : '') : e.type === 'ignored' ? 'Duplicate load ignored' : e.type === 'go' ? 'GO' : e.type === 'end' ? 'END' : e.type); return x; }));
+      }
+    }
+  }
+
+  // ---- buttons ----
+  $('code').addEventListener('input', applyPlan);
+  $('week').addEventListener('change', () => { weekTouched = true; });
+  $('b-start').addEventListener('click', async () => {
+    const code = $('code').value.trim();
+    if (!code) { $('idle-msg').textContent = 'Enter a participant code first.'; $('code').focus(); return; }
+    $('idle-msg').textContent = '';
+    M.run = { id: rid(), participant: code, week: $('week').value, startedAt: Date.now(), endedAt: null, downloaded: false, confirmed: false, startCid: null };
+    M.lastCode = code; saveM(); update();
+    const cid = await sendStart(); if (M.run) { M.run.startCid = cid; saveM(); }
+    update();
   });
-  $('b-end').addEventListener('click', () => send('end', {}, 'End block'));
-  $('b-summary').addEventListener('click', () => send('view', { view: 'summary' }, 'Show all items'));
-  $('b-rank').addEventListener('click', () => {
-    const cur = currentSession(); const on = !(cur && cur.phone && cur.phone.ranked);
-    send('rank', { on }, 'Rank list ' + (on ? 'on' : 'off'));
+  $('b-retry').addEventListener('click', async () => {
+    if (!M.run || !window.confirm('Reset the phone again? Its counts go back to zero. Only do this before the participant starts scanning.')) return;
+    M.run.startCid = await sendStart(); saveM(); update();
   });
-  $('b-ping').addEventListener('click', () => send('ping', {}, 'Test connection'));
+  $('b-reset').addEventListener('click', () => $('b-retry').click());
+  $('b-end').addEventListener('click', () => {
+    const run = M.run; if (!run || run.endedAt) return;
+    const a = analyse(run);
+    if (a.scans.length < a.expected.length && !window.confirm('Only ' + a.scans.length + ' of ' + a.expected.length + ' scans so far. End the run anyway?')) return;
+    run.endedAt = Date.now(); saveM(); send('end', { run: run.id }, 'End'); update();
+  });
+  $('b-csv').addEventListener('click', () => { if (M.run) { download(M.run); update(); } });
+  $('b-new').addEventListener('click', () => {
+    const r = M.run;
+    if (r && !r.downloaded && !window.confirm('This run has not been downloaded. Start a new participant anyway?')) return;
+    if (r) M.lastCode = r.participant; M.run = null; saveM(); resetForm(); update();
+  });
+  $('b-cancel').addEventListener('click', () => {
+    if (!M.run || !window.confirm('Discard this run? Nothing is deleted from the phone.')) return;
+    M.lastCode = M.run.participant; M.run = null; saveM(); resetForm(); update();
+  });
+  $('b-summary').addEventListener('click', () => { send('view', { view: 'summary' }, 'Show all items'); update(); });
+  $('b-rank').addEventListener('click', () => { const ph = newest() && newest().phone; send('rank', { on: !(ph && ph.ranked) }, 'Rank list'); update(); });
+  $('b-ping').addEventListener('click', () => { send('ping', {}, 'Test connection'); update(); });
   $('b-erase').addEventListener('click', () => {
-    const cur = currentSession(); if (!cur) return;
-    const t = window.prompt('This erases ALL logged data on the phone. A CSV of this session downloads first. Type ERASE to continue.');
-    if (t !== 'ERASE') return;
-    downloadCsv(cur);
-    send('erase', {}, 'Erase phone data');
+    if (window.prompt('This erases ALL logged data on the phone. If a run is open, its CSV downloads first. Type ERASE to continue.') !== 'ERASE') return;
+    if (M.run) download(M.run);
+    send('erase', {}, 'Erase phone data'); update();
   });
-  $('csv').addEventListener('click', () => { const cur = currentSession(); if (cur) downloadCsv(cur); });
-  sel.addEventListener('change', () => { selected = sel.value; render(); });
+  $('more').addEventListener('toggle', () => { sigs.more = null; update(); });
 
-  // Tick: live "since GO", phone status and command status.
-  setInterval(() => {
-    const cur = currentSession(); const node = $('since');
-    if (cur && node) { const a = analyse(cur); const g = a.go ? serverTime[cur.sid + ':' + a.go.id] : null; if (g && !a.end) node.textContent = secs(Date.now() - g); }
-    updateControls(); updateCmdStat();
-  }, 500);
-
-  function connect() {
-    const es = new EventSource(LIVE_BASE + encodeURIComponent(topic) + '/sse?since=all');
-    es.onopen = () => { conn.textContent = 'Connected'; conn.className = 'pill on'; };
-    es.onerror = () => { conn.textContent = 'Reconnecting…'; conn.className = 'pill off'; };
-    es.onmessage = e => { ingest(e.data); render(); updateCmdStat(); };
-    return es;
-  }
+  setInterval(update, 250);
   if (!topicOK) {
-    conn.textContent = 'No topic'; conn.className = 'pill off';
-    view.replaceChildren(el('section', { class: 'panel', style: 'margin-top:1rem' },
-      el('h2', {}, 'Set your topic'),
-      el('p', { class: 'empty' }, 'Open this page as monitor.html?topic=YOUR-PRIVATE-TOPIC (letters, numbers, - and _ only). Use the same topic on the phone page. It is remembered in this browser.')));
-    ['b-setup', 'b-start', 'b-end', 'b-summary', 'b-rank', 'b-ping', 'b-erase'].forEach(id => { $(id).disabled = true; });
-  } else { render(); connect(); }
+    $('relay').textContent = 'No topic'; $('relay').className = 'pill off'; $('notopic').hidden = false;
+    document.querySelectorAll('button').forEach(b => { b.disabled = true; }); $('more').hidden = true;
+  } else {
+    resetForm();
+    if (M.run) { $('code').value = nextCode(M.run.participant); applyPlan(); }
+    const es = new EventSource(LIVE_BASE + encodeURIComponent(topic) + '/sse?since=all');
+    es.onopen = () => { $('relay').textContent = 'Connected'; $('relay').className = 'pill on'; };
+    es.onerror = () => { $('relay').textContent = 'Reconnecting…'; $('relay').className = 'pill off'; };
+    es.onmessage = e => { ingest(e.data); update(); };
+    update();
+  }
 })();
 </script>
 </body>
