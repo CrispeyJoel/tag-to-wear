@@ -21,11 +21,11 @@ ITEMS = [
     (0, "Practice tag", None),
     (1, "Black hoodie", 80),
     (2, "Denim jacket", 120),
-    (3, "White tee", 25),
+    (3, "White tee", 40),
     (4, "Jeans", 90),
     (5, "Flannel shirt", 60),
     (6, "Sneakers", 110),
-    (7, "Beanie", 20),
+    (7, "Beanie", 30),
     (8, "Raincoat", 150),
 ]
 
